@@ -19,6 +19,7 @@ import { GrammarPart } from "@/components/exam/grammar/GrammarPart";
 import { WritingTask } from "@/components/exam/writing/WritingTask";
 import { PrepCountdown } from "@/components/exam/speaking/PrepCountdown";
 import { SpeakingTask } from "@/components/exam/speaking/SpeakingTask";
+import { MicPermissionGate } from "@/components/common/MicPermissionGate";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -310,6 +311,13 @@ function ExamMachineView({ attempt, contentPack }: { attempt: AttemptRecord; con
 }
 
 function Instructions({ mode, onStart }: { mode: AttemptRecord["mode"]; onStart: () => void }) {
+  // Requesting mic access here — on a real click, well before the timer-driven
+  // Speaking section — matters most on Safari/iOS, which often refuses
+  // getUserMedia() when it isn't triggered by a direct user gesture. Asking
+  // now means the browser already has an answer by the time Speaking's
+  // auto-advancing timer needs the mic, instead of a silent failure mid-exam.
+  const [micGranted, setMicGranted] = useState(false);
+
   return (
     <div className="mx-auto flex w-full max-w-xl flex-1 flex-col justify-center gap-6 px-4 py-16">
       <Card>
@@ -325,16 +333,19 @@ function Instructions({ mode, onStart }: { mode: AttemptRecord["mode"]; onStart:
           <p>• Listening: 20 minutos, 14 preguntas en 3 partes. Cada audio se reproduce una sola vez.</p>
           <p>• Grammar: 10 minutos, 25 preguntas, puedes navegar libremente entre ellas.</p>
           <p>• Writing: 2 tareas (5 y 20 minutos) calificadas por IA.</p>
-          <p>• Speaking: 2 tareas grabadas con preparación cronometrada, calificadas por IA. Necesitas micrófono.</p>
+          <p>• Speaking: 2 tareas grabadas con preparación cronometrada, calificadas por IA.</p>
           {mode === "intensive" && (
             <p className="font-medium text-foreground">
               Estás en Modo Entrenamiento Intensivo: el tiempo se agota automáticamente y no hay pistas disponibles.
             </p>
           )}
+          <div className="border-t pt-3">
+            <MicPermissionGate onGranted={() => setMicGranted(true)} />
+          </div>
         </CardContent>
       </Card>
-      <Button size="lg" onClick={onStart}>
-        Comenzar Reading
+      <Button size="lg" onClick={onStart} disabled={!micGranted}>
+        {micGranted ? "Comenzar Reading" : "Habilita el micrófono para continuar"}
       </Button>
     </div>
   );

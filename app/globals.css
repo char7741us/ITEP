@@ -58,27 +58,32 @@
 
   --background: var(--tone-cream);
   --foreground: var(--tone-burgundy);
-  --card: oklch(1 0 0);
+  --card: #ffffff;
   --card-foreground: var(--tone-burgundy);
-  --popover: oklch(1 0 0);
+  --popover: #ffffff;
   --popover-foreground: var(--tone-burgundy);
   --primary: var(--tone-burgundy);
   --primary-foreground: var(--tone-butter);
   --secondary: var(--tone-butter);
   --secondary-foreground: var(--tone-burgundy);
-  --muted: color-mix(in oklch, var(--tone-butter) 22%, white);
-  --muted-foreground: color-mix(in oklch, var(--tone-burgundy) 75%, transparent);
+  /* Precomputed equivalents of color-mix()/oklch() — Safari < 16.2 doesn't
+     support color-mix(), and older WebKit can silently drop the whole custom
+     property when it can't parse the value, which breaks backgrounds/text
+     entirely rather than just looking slightly off. Static hex/rgba is
+     supported everywhere. */
+  --muted: #fbf6e3;
+  --muted-foreground: rgba(122, 31, 53, 0.75);
   --accent: var(--tone-pink);
   --accent-foreground: var(--tone-burgundy);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: color-mix(in oklch, var(--tone-burgundy) 14%, transparent);
-  --input: color-mix(in oklch, var(--tone-burgundy) 18%, transparent);
+  --destructive: #dc2626;
+  --border: rgba(122, 31, 53, 0.14);
+  --input: rgba(122, 31, 53, 0.18);
   --ring: var(--tone-pink);
   --chart-1: var(--tone-burgundy);
   --chart-2: #c2436b;
   --chart-3: #d99a1f;
   --chart-4: var(--tone-pink);
-  --chart-5: color-mix(in oklch, var(--tone-burgundy) 45%, var(--tone-butter));
+  --chart-5: #bc8552;
   --radius: 0.875rem;
   --sidebar: var(--tone-cream);
   --sidebar-foreground: var(--tone-burgundy);
@@ -86,7 +91,7 @@
   --sidebar-primary-foreground: var(--tone-butter);
   --sidebar-accent: var(--tone-pink);
   --sidebar-accent-foreground: var(--tone-burgundy);
-  --sidebar-border: color-mix(in oklch, var(--tone-burgundy) 14%, transparent);
+  --sidebar-border: rgba(122, 31, 53, 0.14);
   --sidebar-ring: var(--tone-pink);
 }
 
@@ -99,13 +104,13 @@
   --popover-foreground: var(--tone-butter);
   --primary: var(--tone-butter);
   --primary-foreground: var(--tone-burgundy);
-  --secondary: color-mix(in oklch, var(--tone-burgundy) 60%, black);
+  --secondary: #491320;
   --secondary-foreground: var(--tone-butter);
-  --muted: color-mix(in oklch, var(--tone-burgundy) 70%, black);
-  --muted-foreground: color-mix(in oklch, var(--tone-butter) 70%, transparent);
+  --muted: #551625;
+  --muted-foreground: rgba(242, 216, 106, 0.7);
   --accent: var(--tone-pink);
   --accent-foreground: var(--tone-burgundy);
-  --destructive: oklch(0.704 0.191 22.216);
+  --destructive: #f87171;
   --border: rgba(246, 237, 220, 0.18);
   --input: rgba(246, 237, 220, 0.22);
   --ring: var(--tone-pink);
@@ -113,7 +118,7 @@
   --chart-2: var(--tone-pink);
   --chart-3: #e8b23a;
   --chart-4: #e88fa8;
-  --chart-5: color-mix(in oklch, var(--tone-butter) 45%, white);
+  --chart-5: #f9edbc;
   --sidebar: var(--tone-burgundy);
   --sidebar-foreground: var(--tone-butter);
   --sidebar-primary: var(--tone-butter);

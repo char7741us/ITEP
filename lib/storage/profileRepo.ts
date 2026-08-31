@@ -98,11 +98,17 @@ export function deleteProfile(username: string): void {
   }
 }
 
+// Stable references: useSyncExternalStore compares snapshots by identity and
+// loops forever if the server snapshot returns a fresh value each call.
+const EMPTY_PROFILES: UserProfile[] = [];
+const serverProfileSnapshot = () => null;
+const serverProfilesSnapshot = () => EMPTY_PROFILES;
+
 /** Hydration-safe: server snapshot is always `null`, matching the SSR pass. */
 export function useActiveProfile(): UserProfile | null {
-  return useSyncExternalStore(subscribe, getActiveProfile, () => null);
+  return useSyncExternalStore(subscribe, getActiveProfile, serverProfileSnapshot);
 }
 
 export function useProfiles(): UserProfile[] {
-  return useSyncExternalStore(subscribe, getProfiles, () => []);
+  return useSyncExternalStore(subscribe, getProfiles, serverProfilesSnapshot);
 }

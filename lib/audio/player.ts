@@ -96,6 +96,25 @@ function assignVoicesToSpeakers(speakers: string[]): Map<string, SpeechSynthesis
 }
 
 /**
+ * Safari/iOS tie SpeechSynthesis's first-ever `speak()` call to a genuine user
+ * gesture. Our normal flow tries the real audio file first and only falls
+ * back to synthesis from that file's async `error` event — which is no
+ * longer inside the click's call stack. Call this synchronously at the top
+ * of the click handler so the fallback stays "unlocked" regardless of which
+ * path ends up playing.
+ */
+export function unlockSpeechSynthesis(): void {
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+  try {
+    const unlock = new SpeechSynthesisUtterance("");
+    unlock.volume = 0;
+    window.speechSynthesis.speak(unlock);
+  } catch {
+    // best-effort only
+  }
+}
+
+/**
  * Plays a pre-rendered audio file (see scripts/generate-listening-audio.ts).
  * Calls `onError` instead of throwing if the file is missing/unplayable, so
  * the caller can fall back to `playListeningScript`.

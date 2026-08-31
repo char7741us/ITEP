@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Volume2, CheckCircle2, Play } from "lucide-react";
-import { playAudioFile, playListeningScript, type PlaybackHandle } from "@/lib/audio/player";
+import { playAudioFile, playListeningScript, unlockSpeechSynthesis, type PlaybackHandle } from "@/lib/audio/player";
 import type { ListeningLine } from "@/lib/types/content";
 import { Button } from "@/components/ui/button";
 
@@ -36,6 +36,7 @@ export function AudioPlayer({
     if (status !== "idle") return;
     setStatus("playing");
     cancelledRef.current = false;
+    unlockSpeechSynthesis();
     const finish = () => {
       if (cancelledRef.current) return;
       setStatus("done");
