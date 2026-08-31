@@ -3,10 +3,12 @@ import { createEmptyResponses } from "@/lib/types/attempt";
 import type { ExamMode } from "@/lib/types/mode";
 import type { ExamContentPack } from "@/lib/types/content";
 import type { ExamMachineContext } from "./machine.types";
+import { getActiveUsername } from "@/lib/storage/profileRepo";
 
 export function createAttemptRecord(mode: ExamMode, contentPack: ExamContentPack): AttemptRecord {
   return {
     id: crypto.randomUUID(),
+    profileUsername: getActiveUsername() ?? undefined,
     contentPackId: contentPack.manifest.packId,
     contentPackVersion: contentPack.manifest.version,
     mode,

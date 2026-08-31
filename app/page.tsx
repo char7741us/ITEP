@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Greeting } from "@/components/profile/Greeting";
 
 export default function Home() {
   return (
@@ -10,6 +11,9 @@ export default function Home() {
         <p className="font-signature text-xl italic text-primary/70">
           by Michh <span aria-hidden="true">💕</span>
         </p>
+        <div className="flex justify-center">
+          <Greeting />
+        </div>
         <p className="mx-auto max-w-2xl text-muted-foreground">
           Simulacro de práctica del examen iTEP Academic-Plus: Reading, Listening, Grammar, Writing y Speaking,
           con temporizador real, análisis de resultados y seguimiento de tu progreso. Todo el contenido es

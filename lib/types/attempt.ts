@@ -52,6 +52,8 @@ export interface AttemptScores {
 
 export interface AttemptRecord {
   id: string;
+  /** Username of the active local profile when this attempt was started (see lib/storage/profileRepo.ts). Absent for attempts made before profiles existed. */
+  profileUsername?: string;
   contentPackId: string;
   contentPackVersion: string;
   mode: ExamMode;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,10 +25,25 @@ const MODE_OPTIONS: { value: ExamMode; description: string }[] = [
   },
 ];
 
+function noopSubscribe() {
+  return () => {};
+}
+
 export default function NewExamPage() {
   const router = useRouter();
-  const [mode, setMode] = useState<ExamMode>(() => getSettings().modeDefault);
+  // localStorage isn't available during SSR — useSyncExternalStore is the
+  // hydration-safe way to read it: the server snapshot matches what SSR
+  // renders, then React swaps in the real client value after hydration
+  // without ever reporting a mismatch (unlike reading it in a useState
+  // initializer or an effect-driven setState).
+  const savedMode = useSyncExternalStore(
+    noopSubscribe,
+    () => getSettings().modeDefault,
+    () => "intensive" as ExamMode
+  );
+  const [modeOverride, setModeOverride] = useState<ExamMode | null>(null);
   const [starting, setStarting] = useState(false);
+  const mode = modeOverride ?? savedMode;
 
   async function handleStart() {
     setStarting(true);
@@ -50,7 +65,7 @@ export default function NewExamPage() {
 
       <Card>
         <CardContent className="pt-6">
-          <RadioGroup value={mode} onValueChange={(v) => setMode(v as ExamMode)} className="gap-4">
+          <RadioGroup value={mode} onValueChange={(v) => setModeOverride(v as ExamMode)} className="gap-4">
             {MODE_OPTIONS.map((option) => (
               <label
                 key={option.value}
