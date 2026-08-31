@@ -39,12 +39,12 @@ cp .env.local.example .env.local
 ## Variables de Entorno
 
 ```env
-# API key de Google Gemini para calificación de Writing y Speaking
+# Una sola key de Gemini para todo: calificación de Writing/Speaking, generación
+# de audio real de Listening (TTS), y el futuro agente de voz de Modo Práctica.
 GEMINI_API_KEY=tu_api_key_aqui
-
-# API key del AI Gateway de Vercel (opcional)
-AI_GATEWAY_API_KEY=tu_api_key_aqui
 ```
+
+Consíguela gratis en [Google AI Studio](https://aistudio.google.com/apikey).
 
 ## Desarrollo
 
@@ -58,11 +58,15 @@ npm run dev
 ## Scripts Disponibles
 
 ```bash
-npm run dev      # Servidor de desarrollo
-npm run build    # Build de producción
-npm run start    # Iniciar servidor de producción
-npm run lint     # Ejecutar linter
-npm run test     # Ejecutar tests
+npm run dev              # Servidor de desarrollo
+npm run build            # Build de producción
+npm run start            # Iniciar servidor de producción
+npm run lint             # Ejecutar linter
+npm run test             # Ejecutar tests
+npm run validate:content # Valida los bancos de contenido contra el schema
+npm run generate:audio   # Genera el audio real de Listening con Gemini TTS
+                          # (requiere GEMINI_API_KEY; sin ella, el navegador usa
+                          # su propia voz sintética como respaldo automático)
 ```
 
 ## Estructura del Proyecto
@@ -97,6 +101,11 @@ npm run test     # Ejecutar tests
 - **Almacenamiento**: IndexedDB + localStorage
 - **Tests**: Vitest + Testing Library
 
-## Licencia
+## Despliegue en Vercel
 
-MIT
+1. Sube este repositorio a GitHub.
+2. En [vercel.com/new](https://vercel.com/new), importa el repositorio (Vercel detecta Next.js automáticamente, sin configuración extra).
+3. Antes del primer deploy, agrega la variable de entorno `GEMINI_API_KEY` en **Project Settings → Environment Variables** (Production, Preview y Development).
+4. Deploy. Cada push a la rama principal despliega automáticamente.
+
+Si generaste audio real con `npm run generate:audio`, los archivos `.wav` en `public/audio/` se despliegan como assets estáticos junto con el resto del sitio — no se necesita configuración adicional ni almacenamiento externo.
