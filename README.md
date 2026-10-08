@@ -97,7 +97,7 @@ npm run generate:audio   # Genera el audio real de Listening con Gemini TTS
 - **UI**: React 19 + TypeScript
 - **Estilos**: Tailwind CSS v4 + shadcn/ui
 - **State**: XState v5 (máquina de estados del examen)
-- **IA**: Google Gemini (gemini-3.8-flash) para calificación
+- **IA**: Google Gemini (gemini-3.7-flash, con respaldo gemini-3.5-flash-lite) para calificación
 - **Almacenamiento**: IndexedDB + localStorage
 - **Tests**: Vitest + Testing Library
 
