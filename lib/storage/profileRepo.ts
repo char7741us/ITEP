@@ -5,6 +5,7 @@ import type { UserProfile } from "@/lib/types/profile";
 
 const PROFILES_KEY = "itep-simulator:profiles";
 const ACTIVE_KEY = "itep-simulator:active-profile";
+const EMPTY_PROFILES: UserProfile[] = [];
 
 type Listener = () => void;
 const listeners = new Set<Listener>();
@@ -104,5 +105,5 @@ export function useActiveProfile(): UserProfile | null {
 }
 
 export function useProfiles(): UserProfile[] {
-  return useSyncExternalStore(subscribe, getProfiles, () => []);
+  return useSyncExternalStore(subscribe, getProfiles, () => EMPTY_PROFILES);
 }

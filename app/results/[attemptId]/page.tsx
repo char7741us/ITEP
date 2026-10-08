@@ -66,7 +66,10 @@ export default function ResultsPage() {
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-10">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Resultados del simulacro</h1>
-        <Button variant="outline" nativeButton={false} render={<Link href="/dashboard">Ver progreso</Link>} />
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" nativeButton={false} render={<Link href="/cuaderno-errores">Entrenar debilidades</Link>} />
+          <Button variant="outline" nativeButton={false} render={<Link href="/dashboard">Ver progreso</Link>} />
+        </div>
       </div>
 
       <ScoreSummaryCard scores={attempt.scores} isPartial={false} />

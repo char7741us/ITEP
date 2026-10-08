@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { href: "/", label: "Inicio" },
   { href: "/exam/new", label: "Nuevo simulacro" },
   { href: "/dashboard", label: "Progreso" },
+  { href: "/cuaderno-errores", label: "Cuaderno de Errores" },
 ];
 
 export function Header() {
@@ -17,7 +18,7 @@ export function Header() {
 
   return (
     <header className="border-b bg-background">
-      <div className="mx-auto flex h-14 w-full max-w-5xl items-center justify-between px-4">
+      <div className="mx-auto flex min-h-14 w-full max-w-5xl flex-wrap items-center justify-between gap-2 px-4 py-2">
         <Link href="/" className="flex items-baseline gap-2">
           <span className="font-semibold tracking-tight">iTEP Simulator</span>
           <span className="font-signature text-base italic text-primary/70">

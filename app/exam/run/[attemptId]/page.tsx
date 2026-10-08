@@ -8,6 +8,8 @@ import { examMachine, getGrammarItems, getListeningSegments } from "@/lib/exam/m
 import { useExamClockTicker } from "@/lib/exam/timerEngine";
 import { getAttempt, saveAttempt, saveSpeakingAudio } from "@/lib/storage/attemptsRepo";
 import { buildCompletedAttemptRecord } from "@/lib/exam/attemptRecord";
+import { collectFailedTopics } from "@/lib/notebook/failedRules";
+import { recordCompletedAttempt } from "@/lib/notebook/store";
 import { loadContentPack } from "@/lib/content/loader";
 import { loadRuntimeSnapshot, saveRuntimeSnapshot, clearRuntimeSnapshot } from "@/lib/storage/runtimeRepo";
 import type { AttemptRecord } from "@/lib/types/attempt";
@@ -109,6 +111,15 @@ function ExamMachineView({ attempt, contentPack }: { attempt: AttemptRecord; con
     (async () => {
       const completed = buildCompletedAttemptRecord(attempt, state.context);
       await saveAttempt(completed);
+      try {
+        await recordCompletedAttempt(
+          completed.id,
+          completed.profileUsername ?? null,
+          collectFailedTopics(completed, contentPack)
+        );
+      } catch (error) {
+        console.error("No se pudo guardar el cuaderno de errores:", error);
+      }
       router.push(`/results/${attempt.id}`);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps

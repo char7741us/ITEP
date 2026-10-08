@@ -10,10 +10,11 @@ Simulacro de práctica completo para el examen **iTEP Academic-Plus**, construid
 - **Rubric detallado** con 4 dimensiones de evaluación (Fluidez, Gramática, Vocabulario, Coherencia)
 - **Niveles CEFR** automáticos (Below B2, B2, C1, C2)
 - **Dashboard de progreso** con gráficos de tendencia por habilidad
+- **Cuaderno de Errores** local: agrupa temas fallados y genera tres ejercicios nuevos por tema con Gemini; tres aciertos consecutivos lo marcan como dominado
 - **2 packs de contenido** con preguntas de dificultad examen real
 - **Modo Práctica** y **Modo Entrenamiento Intensivo**
 - **Grabación de audio** directa desde el navegador con MediaRecorder API
-- **Persistencia local** usando IndexedDB para intentos y grabaciones
+- **Persistencia local** usando IndexedDB para intentos y grabaciones, y localStorage para el cuaderno
 
 ## Requisitos
 
@@ -39,7 +40,8 @@ cp .env.local.example .env.local
 ## Variables de Entorno
 
 ```env
-# Una sola key de Gemini para todo: calificación de Writing/Speaking, generación
+# Una sola key de Gemini para todo: calificación de Writing/Speaking,
+# generación de ejercicios gemelos y generación
 # de audio real de Listening (TTS), y el futuro agente de voz de Modo Práctica.
 GEMINI_API_KEY=tu_api_key_aqui
 ```
@@ -76,7 +78,8 @@ npm run generate:audio   # Genera el audio real de Listening con Gemini TTS
 │   ├── exam/               # Páginas del examen
 │   ├── results/            # Página de resultados
 │   ├── dashboard/          # Dashboard de progreso
-│   └── api/                # API routes para calificación
+│   ├── cuaderno-errores/   # Práctica de temas fallados
+│   └── api/                # API routes para calificación y ejercicios gemelos
 ├── components/             # Componentes React
 │   ├── exam/               # Componentes del examen
 │   ├── dashboard/          # Componentes del dashboard
@@ -86,6 +89,7 @@ npm run generate:audio   # Genera el audio real de Listening con Gemini TTS
 │   ├── content/            # Packs de contenido
 │   ├── exam/               # Máquina de estados y scoring
 │   ├── gemini/             # Integración con Google Gemini
+│   ├── notebook/           # Reglas falladas, estado persistente y rachas
 │   ├── storage/            # Persistencia (IndexedDB, localStorage)
 │   └── types/              # Definiciones TypeScript
 └── scripts/                # Scripts de validación
