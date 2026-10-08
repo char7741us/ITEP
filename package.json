@@ -9,6 +9,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "generate:audio": "tsx scripts/generate-listening-audio.ts",
+    "render:daily-audio": "tsx scripts/render-daily-audio.ts",
     "validate:content": "tsx scripts/validate-content-packs.ts"
   },
   "dependencies": {

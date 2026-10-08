@@ -9,7 +9,7 @@ export interface FailedTopic {
   failed_rule: string;
 }
 
-function comprehensionRule(section: "Reading" | "Listening", question: string): string {
+export function comprehensionRule(section: "Reading" | "Listening", question: string): string {
   const text = question.toLowerCase();
   const prefix = section === "Reading" ? "Comprensión lectora" : "Comprensión auditiva";
 

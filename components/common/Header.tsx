@@ -8,6 +8,7 @@ import { ProfileControl } from "@/components/profile/ProfileControl";
 const NAV_ITEMS = [
   { href: "/", label: "Inicio" },
   { href: "/exam/new", label: "Nuevo simulacro" },
+  { href: "/practica-diaria", label: "Práctica diaria" },
   { href: "/dashboard", label: "Progreso" },
   { href: "/cuaderno-errores", label: "Cuaderno de Errores" },
 ];

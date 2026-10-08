@@ -42,6 +42,7 @@ export default function Home() {
 
       <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
         <Button size="lg" nativeButton={false} render={<Link href="/exam/new">Comenzar un simulacro</Link>} />
+        <Button size="lg" variant="secondary" nativeButton={false} render={<Link href="/practica-diaria">60 días de práctica</Link>} />
         <Button size="lg" variant="outline" nativeButton={false} render={<Link href="/dashboard">Ver mi progreso</Link>} />
       </div>
     </div>
