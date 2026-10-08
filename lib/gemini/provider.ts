@@ -1,7 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 
-/** Cheap, multimodal, GA model — plenty for rubric-based grading (not the Live/realtime path). */
-export const GRADING_MODEL = "gemini-2.5-flash";
+/** Stable multimodal model for rubric-based text and audio grading (not the Live/realtime path). */
+export const GRADING_MODEL = "gemini-3.8-flash";
 
 let client: GoogleGenAI | null = null;
 
