@@ -7,13 +7,24 @@ export interface RecordingHandle {
 
 export async function startRecording(): Promise<RecordingHandle> {
   const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  const mimeType = typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "";
-  const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+  let recorder: MediaRecorder;
+  try {
+    const mimeType = typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "";
+    recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+  } catch (error) {
+    stream.getTracks().forEach((track) => track.stop());
+    throw error;
+  }
   const chunks: BlobPart[] = [];
   recorder.ondataavailable = (e) => {
     if (e.data.size > 0) chunks.push(e.data);
   };
-  recorder.start();
+  try {
+    recorder.start();
+  } catch (error) {
+    stream.getTracks().forEach((track) => track.stop());
+    throw error;
+  }
 
   function stopTracks() {
     stream.getTracks().forEach((track) => track.stop());
@@ -27,6 +38,10 @@ export async function startRecording(): Promise<RecordingHandle> {
           resolve(new Blob(chunks, { type: recorder.mimeType || "audio/webm" }));
         };
         if (recorder.state !== "inactive") recorder.stop();
+        else {
+          stopTracks();
+          resolve(new Blob(chunks, { type: recorder.mimeType || "audio/webm" }));
+        }
       }),
     cancel: () => {
       if (recorder.state !== "inactive") recorder.stop();

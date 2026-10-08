@@ -3,9 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Mic, MicOff, Circle } from "lucide-react";
 import { startRecording, type RecordingHandle } from "@/lib/audio/recorder";
+import { Button } from "@/components/ui/button";
 
-export function RecorderControls({ onRecorded }: { onRecorded: (blob: Blob) => void }) {
+export function RecorderControls({ onRecorded, onRecordingFailed }: { onRecorded: (blob: Blob) => void; onRecordingFailed: () => void }) {
   const [status, setStatus] = useState<"starting" | "recording" | "error">("starting");
+  const [retryToken, setRetryToken] = useState(0);
   const handleRef = useRef<RecordingHandle | null>(null);
 
   useEffect(() => {
@@ -19,17 +21,20 @@ export function RecorderControls({ onRecorded }: { onRecorded: (blob: Blob) => v
         handleRef.current = handle;
         setStatus("recording");
       })
-      .catch(() => setStatus("error"));
+      .catch(() => {
+        if (!stopped) setStatus("error");
+      });
 
     return () => {
       stopped = true;
       const handle = handleRef.current;
       if (handle) {
-        handle.stop().then(onRecorded);
-      }
+        handleRef.current = null;
+        handle.stop().then(onRecorded).catch(onRecordingFailed);
+      } else onRecordingFailed();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [retryToken]);
 
   if (status === "error") {
     return (
@@ -38,11 +43,12 @@ export function RecorderControls({ onRecorded }: { onRecorded: (blob: Blob) => v
           <MicOff className="h-5 w-5 shrink-0 text-destructive" />
           <div>
             <p className="text-sm font-medium text-destructive">No se pudo acceder al micrófono</p>
-            <p className="text-xs text-muted-foreground">
-              Revisa los permisos del navegador y recarga la página.
-            </p>
+            <p className="text-xs text-muted-foreground">Permite el acceso al micrófono y vuelve a intentarlo. El tiempo sigue corriendo.</p>
           </div>
         </div>
+        <Button variant="outline" size="sm" className="mt-4" onClick={() => { setStatus("starting"); setRetryToken((value) => value + 1); }}>
+          Reintentar micrófono
+        </Button>
       </div>
     );
   }

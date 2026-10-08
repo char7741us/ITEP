@@ -17,16 +17,23 @@ export const examMachine = setup({
     gradeAttempt: fromPromise(({ input }: { input: ExamMachineContext }) => gradeFullAttempt(input)),
   },
   guards: {
+    legacyOrder: ({ context }) => context.examOrderVersion !== 2,
+    legacyReadingTimeIsUp: ({ context, event }) =>
+      context.examOrderVersion !== 2 && event.type === "TICK" && context.reading.endsAt !== null && event.now >= context.reading.endsAt,
+    legacyListeningTimeIsUp: ({ context, event }) =>
+      context.examOrderVersion !== 2 && event.type === "TICK" && context.listening.endsAt !== null && event.now >= context.listening.endsAt,
+    legacyGrammarTimeIsUp: ({ context, event }) =>
+      context.examOrderVersion !== 2 && event.type === "TICK" && context.grammar.endsAt !== null && event.now >= context.grammar.endsAt,
     readingTimeIsUp: ({ context, event }) => {
-      if (event.type !== "TICK" || context.reading.endsAt === null) return false;
+      if (context.examOrderVersion !== 2 || event.type !== "TICK" || context.reading.endsAt === null) return false;
       return event.now >= context.reading.endsAt;
     },
     listeningTimeIsUp: ({ context, event }) => {
-      if (event.type !== "TICK" || context.listening.endsAt === null) return false;
+      if (context.examOrderVersion !== 2 || event.type !== "TICK" || context.listening.endsAt === null) return false;
       return event.now >= context.listening.endsAt;
     },
     grammarTimeIsUp: ({ context, event }) => {
-      if (event.type !== "TICK" || context.grammar.endsAt === null) return false;
+      if (context.examOrderVersion !== 2 || event.type !== "TICK" || context.grammar.endsAt === null) return false;
       return event.now >= context.grammar.endsAt;
     },
     writingTask1TimeIsUp: ({ context, event }) => {
@@ -247,6 +254,7 @@ export const examMachine = setup({
     attemptId: input.attemptId,
     mode: input.mode,
     contentPackKey: input.contentPackKey,
+    examOrderVersion: 2,
     reading: { partIndex: 0, responses: {}, endsAt: null, autoSubmitted: false },
     listening: { currentSegmentIndex: 0, responses: {}, playedSegmentIndices: [], endsAt: null, autoSubmitted: false },
     grammar: { currentIndex: 0, responses: {}, endsAt: null, autoSubmitted: false },
@@ -269,33 +277,35 @@ export const examMachine = setup({
   initial: "setup",
   states: {
     setup: {
-      on: {
-        START: {
-          target: "reading",
-          actions: assign({
-            reading: ({ context }) => ({
-              ...context.reading,
-              endsAt: Date.now() + loadContentPack(context.contentPackKey).reading.totalTimeSeconds * 1000,
-            }),
-          }),
-        },
-      },
+      on: { START: [{ guard: "legacyOrder", target: "reading" }, { target: "grammar" }] },
     },
     reading: {
+      entry: assign({
+        reading: ({ context }) => ({
+          ...context.reading,
+          endsAt: Date.now() + loadContentPack(context.contentPackKey).reading.totalTimeSeconds * 1000,
+        }),
+      }),
       initial: "part1",
       states: {
         part1: {
           on: {
             ANSWER_READING: { actions: "recordReadingAnswer" },
             NEXT_READING_PART: { target: "part2", actions: "advanceReadingPart" },
-            TICK: { guard: "readingTimeIsUp", target: "#exam.listening", actions: "markReadingAutoSubmitted" },
+            TICK: [
+              { guard: "legacyReadingTimeIsUp", target: "#exam.listening", actions: "markReadingAutoSubmitted" },
+              { guard: "readingTimeIsUp", target: "#exam.writing", actions: "markReadingAutoSubmitted" },
+            ],
           },
         },
         part2: {
           on: {
             ANSWER_READING: { actions: "recordReadingAnswer" },
-            SUBMIT_READING: "#exam.listening",
-            TICK: { guard: "readingTimeIsUp", target: "#exam.listening", actions: "markReadingAutoSubmitted" },
+            SUBMIT_READING: [{ guard: "legacyOrder", target: "#exam.listening" }, { target: "#exam.writing" }],
+            TICK: [
+              { guard: "legacyReadingTimeIsUp", target: "#exam.listening", actions: "markReadingAutoSubmitted" },
+              { guard: "readingTimeIsUp", target: "#exam.writing", actions: "markReadingAutoSubmitted" },
+            ],
           },
         },
       },
@@ -306,8 +316,11 @@ export const examMachine = setup({
         MARK_SEGMENT_PLAYED: { actions: "markSegmentPlayed" },
         ANSWER_LISTENING: { actions: "recordListeningAnswer" },
         NEXT_LISTENING_SEGMENT: { actions: "advanceListeningSegment" },
-        SUBMIT_LISTENING: "grammar",
-        TICK: { guard: "listeningTimeIsUp", target: "grammar", actions: "markListeningAutoSubmitted" },
+        SUBMIT_LISTENING: [{ guard: "legacyOrder", target: "grammar" }, { target: "reading" }],
+        TICK: [
+          { guard: "legacyListeningTimeIsUp", target: "grammar", actions: "markListeningAutoSubmitted" },
+          { guard: "listeningTimeIsUp", target: "reading", actions: "markListeningAutoSubmitted" },
+        ],
       },
     },
     grammar: {
@@ -315,8 +328,11 @@ export const examMachine = setup({
       on: {
         ANSWER_GRAMMAR: { actions: "recordGrammarAnswer" },
         GO_TO_GRAMMAR_ITEM: { actions: "goToGrammarItem" },
-        SUBMIT_GRAMMAR: "writing",
-        TICK: { guard: "grammarTimeIsUp", target: "writing", actions: "markGrammarAutoSubmitted" },
+        SUBMIT_GRAMMAR: [{ guard: "legacyOrder", target: "writing" }, { target: "listening" }],
+        TICK: [
+          { guard: "legacyGrammarTimeIsUp", target: "writing", actions: "markGrammarAutoSubmitted" },
+          { guard: "grammarTimeIsUp", target: "listening", actions: "markGrammarAutoSubmitted" },
+        ],
       },
     },
     writing: {
@@ -355,7 +371,16 @@ export const examMachine = setup({
           entry: "startTask1RecordTimer",
           on: {
             SAVE_SPEAKING_RECORDING: { actions: "saveSpeakingRecording" },
-            TICK: { guard: "task1RecordTimeIsUp", target: "task2Prep" },
+            TICK: { guard: "task1RecordTimeIsUp", target: "task1Saving" },
+          },
+        },
+        task1Saving: {
+          on: {
+            SAVE_SPEAKING_RECORDING: { target: "task2Prep", actions: "saveSpeakingRecording" },
+            TICK: {
+              guard: ({ context, event }) => event.type === "TICK" && event.now >= (context.speaking.recordEndsAtByTask[1] ?? 0) + 15000,
+              target: "task2Prep",
+            },
           },
         },
         task2Prep: {
@@ -366,7 +391,16 @@ export const examMachine = setup({
           entry: "startTask2RecordTimer",
           on: {
             SAVE_SPEAKING_RECORDING: { actions: "saveSpeakingRecording" },
-            TICK: { guard: "task2RecordTimeIsUp", target: "#exam.grading" },
+            TICK: { guard: "task2RecordTimeIsUp", target: "task2Saving" },
+          },
+        },
+        task2Saving: {
+          on: {
+            SAVE_SPEAKING_RECORDING: { target: "#exam.grading", actions: "saveSpeakingRecording" },
+            TICK: {
+              guard: ({ context, event }) => event.type === "TICK" && event.now >= (context.speaking.recordEndsAtByTask[2] ?? 0) + 15000,
+              target: "#exam.grading",
+            },
           },
         },
       },
@@ -394,7 +428,7 @@ export const examMachine = setup({
                 Object.values(context.listening.responses)
               );
               const grammarScore = scoreObjectiveSection(getGrammarItems(context.contentPackKey), Object.values(context.grammar.responses));
-              const overall = averageScore([readingScore, listeningScore, grammarScore, 0, 0]);
+              const overall = averageScore([readingScore, listeningScore, grammarScore]);
               return {
                 reading: readingScore,
                 listening: listeningScore,
@@ -405,7 +439,7 @@ export const examMachine = setup({
                 overallBand: scoreToBand(overall).band,
               };
             },
-            gradingErrors: ({ event }) => [event.error instanceof Error ? event.error.message : String(event.error)],
+            gradingErrors: ({ event }) => [`Writing y Speaking: ${event.error instanceof Error ? event.error.message : String(event.error)}`],
           }),
         },
       },

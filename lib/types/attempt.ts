@@ -70,6 +70,7 @@ export interface AttemptRecord {
     speaking: SpeakingResponse[];
   };
   scores?: AttemptScores;
+  gradingErrors?: string[];
 }
 
 export function createEmptyResponses(): AttemptRecord["responses"] {

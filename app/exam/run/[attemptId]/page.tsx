@@ -86,6 +86,7 @@ function ExamMachineView({ attempt, contentPack }: { attempt: AttemptRecord; con
     input: { attemptId: attempt.id, mode: attempt.mode, contentPackKey },
     ...(initialSnapshot ? { snapshot: initialSnapshot } : {}),
   });
+  const legacyOrder = state.context.examOrderVersion !== 2;
 
   useEffect(() => {
     const subscription = actorRef.subscribe((snapshot) => {
@@ -127,12 +128,17 @@ function ExamMachineView({ attempt, contentPack }: { attempt: AttemptRecord; con
 
   async function handleSpeakingRecorded(taskNumber: 1 | 2, blob: Blob) {
     const blobKey = `${attempt.id}:${taskNumber}`;
-    await saveSpeakingAudio(blobKey, blob);
-    send({ type: "SAVE_SPEAKING_RECORDING", taskNumber, blobKey });
+    try {
+      await saveSpeakingAudio(blobKey, blob);
+      send({ type: "SAVE_SPEAKING_RECORDING", taskNumber, blobKey });
+    } catch (error) {
+      console.error("No se pudo guardar la grabación:", error);
+      send({ type: "SAVE_SPEAKING_RECORDING", taskNumber, blobKey: "" });
+    }
   }
 
   if (state.matches("setup")) {
-    return <Instructions mode={attempt.mode} onStart={() => send({ type: "START" })} />;
+    return <Instructions mode={attempt.mode} legacyOrder={legacyOrder} onStart={() => send({ type: "START" })} />;
   }
 
   if (state.matches("reading")) {
@@ -155,7 +161,7 @@ function ExamMachineView({ attempt, contentPack }: { attempt: AttemptRecord; con
           <div className="flex justify-end">
             {isLastPart ? (
               <Button size="lg" onClick={() => send({ type: "SUBMIT_READING" })}>
-                Enviar Reading y continuar a Listening
+                {legacyOrder ? "Enviar Reading y continuar a Listening" : "Enviar Reading y continuar a Writing"}
               </Button>
             ) : (
               <Button size="lg" onClick={() => send({ type: "NEXT_READING_PART" })}>
@@ -188,6 +194,7 @@ function ExamMachineView({ attempt, contentPack }: { attempt: AttemptRecord; con
           onAnswer={(itemId, selectedIndex) => send({ type: "ANSWER_LISTENING", itemId, selectedIndex, timeSpentMs: 0 })}
           onNext={() => send({ type: "NEXT_LISTENING_SEGMENT" })}
           onSubmit={() => send({ type: "SUBMIT_LISTENING" })}
+          nextSectionLabel={legacyOrder ? "Grammar" : "Reading"}
         />
       </SectionShell>
     );
@@ -237,6 +244,9 @@ function ExamMachineView({ attempt, contentPack }: { attempt: AttemptRecord; con
   }
 
   if (state.matches("speaking")) {
+    if (state.matches({ speaking: "task1Saving" }) || state.matches({ speaking: "task2Saving" })) {
+      return <CenteredMessage>Guardando tu respuesta de Speaking...</CenteredMessage>;
+    }
     if (state.matches({ speaking: "warmup" })) {
       return (
         <SectionShell sectionLabel="Speaking" subLabel="Calentamiento" endsAt={state.context.speaking.warmupEndsAt} mode={attempt.mode}>
@@ -267,6 +277,7 @@ function ExamMachineView({ attempt, contentPack }: { attempt: AttemptRecord; con
                   Habla con claridad y organiza tus ideas antes de empezar.
                 </p>
               </div>
+              <MicrophoneCheck />
             </CardContent>
           </Card>
         </SectionShell>
@@ -299,6 +310,7 @@ function ExamMachineView({ attempt, contentPack }: { attempt: AttemptRecord; con
             taskNumber={taskNumber}
             responseSeconds={task.responseSeconds}
             onRecorded={(blob) => handleSpeakingRecorded(taskNumber, blob)}
+            onRecordingFailed={() => send({ type: "SAVE_SPEAKING_RECORDING", taskNumber, blobKey: "" })}
           />
         )}
       </SectionShell>
@@ -320,21 +332,48 @@ function ExamMachineView({ attempt, contentPack }: { attempt: AttemptRecord; con
   );
 }
 
-function Instructions({ mode, onStart }: { mode: AttemptRecord["mode"]; onStart: () => void }) {
+function MicrophoneCheck() {
+  const [message, setMessage] = useState("Comprueba el micrófono antes de que empiece la primera tarea.");
+  const [checking, setChecking] = useState(false);
+
+  async function check() {
+    setChecking(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((track) => track.stop());
+      setMessage("Micrófono listo. El navegador ya tiene permiso para grabar.");
+    } catch {
+      setMessage("No se pudo acceder al micrófono. Revisa el permiso del navegador e inténtalo de nuevo.");
+    } finally {
+      setChecking(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <Button variant="outline" size="sm" onClick={check} disabled={checking}>
+        {checking ? "Comprobando..." : "Probar micrófono"}
+      </Button>
+      <p role="status" className="text-xs text-muted-foreground">{message}</p>
+    </div>
+  );
+}
+
+function Instructions({ mode, legacyOrder, onStart }: { mode: AttemptRecord["mode"]; legacyOrder: boolean; onStart: () => void }) {
   return (
     <div className="mx-auto flex w-full max-w-xl flex-1 flex-col justify-center gap-6 px-4 py-16">
       <Card>
         <CardHeader>
           <CardTitle>Antes de comenzar</CardTitle>
           <CardDescription>
-            El simulacro sigue el orden real del iTEP: Reading → Listening → Grammar → Writing → Speaking. Una vez
+            El simulacro sigue el orden {legacyOrder ? "anterior: Reading → Listening → Grammar" : "de iTEP Academic-Plus: Grammar → Listening → Reading"} → Writing → Speaking. Una vez
             enviada una sección no podrás regresar a ella.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3 text-sm text-muted-foreground">
-          <p>• Reading: 25 minutos, 10 preguntas en 2 partes (avance únicamente hacia adelante).</p>
-          <p>• Listening: 20 minutos, 14 preguntas en 3 partes. Cada audio se reproduce una sola vez.</p>
           <p>• Grammar: 10 minutos, 25 preguntas, puedes navegar libremente entre ellas.</p>
+          <p>• Listening: 20 minutos, 14 preguntas en 3 partes. Cada audio se reproduce una sola vez.</p>
+          <p>• Reading: 20 minutos, 10 preguntas en 2 partes (avance únicamente hacia adelante).</p>
           <p>• Writing: 2 tareas (5 y 20 minutos) calificadas por IA.</p>
           <p>• Speaking: 2 tareas grabadas con preparación cronometrada, calificadas por IA. Necesitas micrófono.</p>
           {mode === "intensive" && (
@@ -345,7 +384,7 @@ function Instructions({ mode, onStart }: { mode: AttemptRecord["mode"]; onStart:
         </CardContent>
       </Card>
       <Button size="lg" onClick={onStart}>
-        Comenzar Reading
+        Comenzar {legacyOrder ? "Reading" : "Grammar"}
       </Button>
     </div>
   );

@@ -93,7 +93,12 @@ export async function gradeFullAttempt(context: ExamMachineContext): Promise<Gra
   const writingScore = writingScores.length ? averageScore(writingScores) : 0;
   const speakingScore = speakingScores.length ? averageScore(speakingScores) : 0;
 
-  const overall = averageScore([readingScore, listeningScore, grammarScore, writingScore, speakingScore]);
+  // An unavailable AI grade is not a zero earned by the student. Leave that
+  // section out of the provisional overall score and flag it in the report.
+  const overallSections = [readingScore, listeningScore, grammarScore];
+  if (!gradingErrors.some((error) => error.startsWith("Writing "))) overallSections.push(writingScore);
+  if (!gradingErrors.some((error) => error.startsWith("Speaking "))) overallSections.push(speakingScore);
+  const overall = averageScore(overallSections);
 
   return {
     scores: {

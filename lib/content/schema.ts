@@ -98,14 +98,16 @@ export function validateContentPack(data: unknown): ValidatedContentPack {
   }
 
   const readingItemCount = result.data.reading.parts.reduce((sum, p) => sum + p.items.length, 0);
-  if (readingItemCount !== 10) {
+  if (readingItemCount !== 10 || result.data.reading.parts[0].items.length !== 4 || result.data.reading.parts[1].items.length !== 6) {
     throw new Error(`Reading debe tener 10 preguntas en total (4 + 6), encontró ${readingItemCount}`);
   }
+  if (result.data.reading.totalTimeSeconds !== 20 * 60) throw new Error("Reading debe durar 20 minutos");
 
   const grammarItemCount = result.data.grammar.parts.reduce((sum, p) => sum + p.items.length, 0);
-  if (grammarItemCount !== 25) {
+  if (grammarItemCount !== 25 || result.data.grammar.parts[0].items.length !== 13 || result.data.grammar.parts[1].items.length !== 12) {
     throw new Error(`Grammar debe tener 25 preguntas en total (13 + 12), encontró ${grammarItemCount}`);
   }
+  if (result.data.grammar.totalTimeSeconds !== 10 * 60) throw new Error("Grammar debe durar 10 minutos");
 
   const listeningItemCount = result.data.listening.parts.reduce(
     (sum, part) => sum + part.segments.reduce((s, seg) => s + seg.items.length, 0),
@@ -113,6 +115,32 @@ export function validateContentPack(data: unknown): ValidatedContentPack {
   );
   if (listeningItemCount !== 14) {
     throw new Error(`Listening debe tener 14 preguntas en total, encontró ${listeningItemCount}`);
+  }
+  if (result.data.listening.totalTimeSeconds !== 20 * 60) throw new Error("Listening debe durar 20 minutos");
+  const listeningShape = result.data.listening.parts.map((part) => [part.segments.length, part.segments.reduce((sum, segment) => sum + segment.items.length, 0)]);
+  if (JSON.stringify(listeningShape) !== JSON.stringify([[4, 4], [1, 4], [1, 6]])) {
+    throw new Error("Listening debe tener 4 conversaciones breves, 1 conversación larga y 1 clase (4 + 4 + 6 preguntas)");
+  }
+  if (result.data.writing.totalTimeSeconds !== 25 * 60 ||
+      result.data.writing.tasks[0].timeLimitSeconds !== 5 * 60 ||
+      result.data.writing.tasks[1].timeLimitSeconds !== 20 * 60) {
+    throw new Error("Writing debe durar 5 + 20 minutos");
+  }
+  if (result.data.speaking.warmupSeconds !== 60 ||
+      result.data.speaking.tasks[0].prepSeconds !== 30 ||
+      result.data.speaking.tasks[0].responseSeconds !== 45 ||
+      result.data.speaking.tasks[1].prepSeconds !== 45 ||
+      result.data.speaking.tasks[1].responseSeconds !== 60) {
+    throw new Error("Los tiempos de Speaking no coinciden con iTEP Academic-Plus");
+  }
+
+  const allItems = [
+    ...result.data.reading.parts.flatMap((part) => part.items),
+    ...result.data.listening.parts.flatMap((part) => part.segments.flatMap((segment) => segment.items)),
+    ...result.data.grammar.parts.flatMap((part) => part.items),
+  ];
+  if (new Set(allItems.map((item) => item.id)).size !== allItems.length) {
+    throw new Error("Los ID de preguntas deben ser únicos dentro de cada simulacro");
   }
 
   return result.data;

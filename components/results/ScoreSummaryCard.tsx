@@ -9,7 +9,7 @@ export function ScoreSummaryCard({ scores, isPartial }: { scores: AttemptScores;
     <Card>
       <CardHeader>
         <CardDescription>
-          {isPartial ? "Puntaje general (parcial: Reading + Listening + Grammar)" : "Puntaje general"}
+          {isPartial ? "Puntaje provisional (solo secciones calificadas)" : "Puntaje general"}
         </CardDescription>
         <div className="flex items-baseline gap-3">
           <CardTitle className="text-4xl font-bold tabular-nums">{scores.overall.toFixed(1)}</CardTitle>

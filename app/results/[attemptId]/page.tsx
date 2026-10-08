@@ -15,6 +15,7 @@ import { ItemReviewList } from "@/components/results/ItemReviewList";
 import { RubricFeedbackCard } from "@/components/results/RubricFeedbackCard";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const WRITING_DIMENSION_LABELS = {
   organization: "Organización",
@@ -61,6 +62,13 @@ export default function ResultsPage() {
   }
 
   const contentPackKey = `${attempt.contentPackId}@${attempt.contentPackVersion}`;
+  const gradingErrors = attempt.gradingErrors ?? [];
+  const ungradedSections = gradingErrors.some((error) => error.startsWith("Writing y Speaking:"))
+    ? ["writing", "speaking"]
+    : [
+        ...(gradingErrors.some((error) => error.startsWith("Writing ")) ? ["writing"] : []),
+        ...(gradingErrors.some((error) => error.startsWith("Speaking ")) ? ["speaking"] : []),
+      ];
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-10">
@@ -72,8 +80,17 @@ export default function ResultsPage() {
         </div>
       </div>
 
-      <ScoreSummaryCard scores={attempt.scores} isPartial={false} />
-      <SectionBreakdownTable scores={attempt.scores} />
+      {gradingErrors.length > 0 && (
+        <Alert variant="destructive">
+          <AlertTitle>Calificación incompleta</AlertTitle>
+          <AlertDescription>
+            La evaluación de IA no terminó para todas las respuestas. El promedio mostrado excluye las secciones sin
+            calificación; no lo interpretes como nota final. Puedes conservar tus respuestas y hacer otro simulacro.
+          </AlertDescription>
+        </Alert>
+      )}
+      <ScoreSummaryCard scores={attempt.scores} isPartial={gradingErrors.length > 0} />
+      <SectionBreakdownTable scores={attempt.scores} ungradedSections={ungradedSections} />
 
       <Separator />
 

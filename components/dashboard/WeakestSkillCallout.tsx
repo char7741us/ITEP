@@ -2,22 +2,28 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { TrendingDown } from "lucide-react";
 import type { AttemptRecord } from "@/lib/types/attempt";
 
-const IMPLEMENTED_SECTIONS = ["reading", "listening", "grammar"] as const;
+const IMPLEMENTED_SECTIONS = ["grammar", "listening", "reading", "writing", "speaking"] as const;
 
 export function WeakestSkillCallout({ attempts }: { attempts: AttemptRecord[] }) {
   const completed = attempts.filter((a) => a.status === "completed" && a.scores);
   if (completed.length === 0) return null;
 
-  const averages = IMPLEMENTED_SECTIONS.map((section) => ({
-    section,
-    average: completed.reduce((sum, a) => sum + a.scores![section], 0) / completed.length,
-  }));
+  const averages = IMPLEMENTED_SECTIONS.map((section) => {
+    const graded = completed.filter((attempt) =>
+      section !== "writing" && section !== "speaking"
+        ? true
+        : !attempt.gradingErrors?.some((error) => error.startsWith(section === "writing" ? "Writing" : "Speaking") || error.startsWith("Writing y Speaking:"))
+    );
+    return { section, average: graded.length ? graded.reduce((sum, a) => sum + a.scores![section], 0) / graded.length : Infinity };
+  }).filter((entry) => Number.isFinite(entry.average));
 
   const weakest = averages.reduce((min, curr) => (curr.average < min.average ? curr : min));
   const labels: Record<(typeof IMPLEMENTED_SECTIONS)[number], string> = {
-    reading: "Reading",
-    listening: "Listening",
     grammar: "Grammar",
+    listening: "Listening",
+    reading: "Reading",
+    writing: "Writing",
+    speaking: "Speaking",
   };
 
   return (

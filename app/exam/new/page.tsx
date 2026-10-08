@@ -16,12 +16,12 @@ const MODE_OPTIONS: { value: ExamMode; description: string }[] = [
   {
     value: "practice",
     description:
-      "Preguntas de un banco distinto al de Entrenamiento Intensivo, para que no memorices respuestas. El tutor de voz en vivo llegará en una próxima actualización.",
+      "Practica con una combinación variable de textos y preguntas originales, con los mismos tiempos del simulacro.",
   },
   {
     value: "intensive",
     description:
-      "Sin ayudas, sin pausas, sin repetir audio: condiciones idénticas al examen real. Ideal para medir tu nivel actual.",
+      "Sin pausas ni repetición de audio; usa otro conjunto de combinaciones para medir tu nivel.",
   },
 ];
 
@@ -43,15 +43,24 @@ export default function NewExamPage() {
   );
   const [modeOverride, setModeOverride] = useState<ExamMode | null>(null);
   const [starting, setStarting] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
   const mode = modeOverride ?? savedMode;
 
   async function handleStart() {
     setStarting(true);
-    saveSettings({ modeDefault: mode });
-    const contentPack = loadContentPack(pickContentPackKeyForMode(mode));
-    const attempt = createAttemptRecord(mode, contentPack);
-    await saveAttempt(attempt);
-    router.push(`/exam/run/${attempt.id}`);
+    setStartError(null);
+    try {
+      const previousKey = getSettings().activePackId;
+      const nextKey = pickContentPackKeyForMode(mode, previousKey);
+      const contentPack = loadContentPack(nextKey);
+      const attempt = createAttemptRecord(mode, contentPack);
+      await saveAttempt(attempt);
+      saveSettings({ modeDefault: mode, activePackId: nextKey });
+      router.push(`/exam/run/${attempt.id}`);
+    } catch (error) {
+      setStartError(error instanceof Error ? error.message : "No se pudo crear el simulacro. Inténtalo otra vez.");
+      setStarting(false);
+    }
   }
 
   return (
@@ -86,12 +95,13 @@ export default function NewExamPage() {
       <Alert>
         <AlertTitle>Versión actual del simulacro</AlertTitle>
         <AlertDescription>
-          Las 5 secciones (Reading, Listening, Grammar, Writing y Speaking) ya están activas. Writing y Speaking se
-          califican con IA (Gemini) — si tu resultado muestra &quot;no se pudo calificar&quot;, revisa que
-          GEMINI_API_KEY esté configurada en el servidor. El tutor de voz en vivo de Modo Práctica llegará en una
-          próxima actualización.
+          Las 5 secciones están activas. Los contenidos son originales, inspirados en la estructura oficial de iTEP;
+          no son preguntas oficiales. Writing y Speaking reciben una evaluación orientativa con Gemini, sujeta a
+          disponibilidad del servicio.
         </AlertDescription>
       </Alert>
+
+      {startError && <p role="alert" className="text-sm text-destructive">{startError}</p>}
 
       <Button size="lg" onClick={handleStart} disabled={starting}>
         {starting ? "Preparando..." : "Comenzar simulacro"}

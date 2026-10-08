@@ -151,6 +151,6 @@ Critics of this research caution against oversimplifying the relationship betwee
 };
 
 export const readingContent = {
-  totalTimeSeconds: 25 * 60,
+  totalTimeSeconds: 20 * 60,
   parts: [part1, part2] as [ReadingPart, ReadingPart],
 };

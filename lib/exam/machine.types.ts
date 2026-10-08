@@ -44,6 +44,8 @@ export interface ExamMachineContext {
    * persisted snapshots small and avoids duplicating immutable data. Look it up
    * with `loadContentPack(contentPackKey)` wherever the pack itself is needed. */
   contentPackKey: string;
+  /** Absent from snapshots created before the official section-order update. */
+  examOrderVersion?: 2;
   reading: ReadingRuntimeState;
   listening: ListeningRuntimeState;
   grammar: GrammarRuntimeState;

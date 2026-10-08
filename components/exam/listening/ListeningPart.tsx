@@ -16,6 +16,7 @@ export function ListeningPart({
   onAnswer,
   onNext,
   onSubmit,
+  nextSectionLabel,
 }: {
   segment: FlattenedListeningSegment;
   isLastSegment: boolean;
@@ -25,6 +26,7 @@ export function ListeningPart({
   onAnswer: (itemId: string, selectedIndex: number) => void;
   onNext: () => void;
   onSubmit: () => void;
+  nextSectionLabel: string;
 }) {
   return (
     <div className="space-y-6">
@@ -59,7 +61,7 @@ export function ListeningPart({
       <div className="flex justify-end">
         {isLastSegment ? (
           <Button size="lg" onClick={onSubmit}>
-            Enviar Listening y continuar a Grammar
+            Enviar Listening y continuar a {nextSectionLabel}
           </Button>
         ) : (
           <Button size="lg" onClick={onNext}>

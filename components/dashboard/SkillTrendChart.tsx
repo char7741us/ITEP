@@ -22,8 +22,8 @@ export function SkillTrendChart({ attempts }: { attempts: AttemptRecord[] }) {
     Reading: attempt.scores!.reading,
     Listening: attempt.scores!.listening,
     Grammar: attempt.scores!.grammar,
-    Writing: attempt.scores!.writing,
-    Speaking: attempt.scores!.speaking,
+    Writing: attempt.gradingErrors?.some((error) => error.startsWith("Writing")) ? null : attempt.scores!.writing,
+    Speaking: attempt.gradingErrors?.some((error) => error.startsWith("Speaking") || error.startsWith("Writing y Speaking:")) ? null : attempt.scores!.speaking,
     General: attempt.scores!.overall,
   }));
 

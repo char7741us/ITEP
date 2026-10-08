@@ -15,9 +15,9 @@ export default function Home() {
           <Greeting />
         </div>
         <p className="mx-auto max-w-2xl text-muted-foreground">
-          Simulacro de práctica del examen iTEP Academic-Plus: Reading, Listening, Grammar, Writing y Speaking,
-          con temporizador real, análisis de resultados y seguimiento de tu progreso. Todo el contenido es
-          original, diseñado para igualar la estructura y dificultad del examen real.
+          Simulacro de práctica inspirado en iTEP Academic-Plus: Grammar, Listening, Reading, Writing y Speaking,
+          con tiempos y tipos de tareas basados en su estructura oficial. Las preguntas son originales; los
+          resultados no sustituyen una calificación oficial.
         </p>
       </div>
 
@@ -26,7 +26,7 @@ export default function Home() {
           <CardHeader>
             <CardTitle>Modo Práctica</CardTitle>
             <CardDescription>
-              Con ayudas y un tutor de voz para explicarte respuestas y practicar conversación en Speaking.
+              Practica con una combinación variable de preguntas y revisa tus errores al terminar.
             </CardDescription>
           </CardHeader>
         </Card>
@@ -34,7 +34,7 @@ export default function Home() {
           <CardHeader>
             <CardTitle>Modo Entrenamiento Intensivo</CardTitle>
             <CardDescription>
-              Cero ayudas: condiciones estrictas de examen real, igual que el día del iTEP.
+              Sin pausas ni repetición de audio, con temporizador para medir tu preparación.
             </CardDescription>
           </CardHeader>
         </Card>

@@ -16,7 +16,7 @@ export function RubricFeedbackCard({
       <Card>
         <CardHeader>
           <CardTitle className="text-base">{title}</CardTitle>
-          <CardDescription>No se pudo calificar esta respuesta (revisa que tu GEMINI_API_KEY esté configurada).</CardDescription>
+          <CardDescription>Sin calificación: no se entregó respuesta o la evaluación automática no estuvo disponible.</CardDescription>
         </CardHeader>
       </Card>
     );

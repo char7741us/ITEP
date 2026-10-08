@@ -28,7 +28,7 @@ const part1: GrammarPart = {
     {
       id: "g1-q4",
       prompt: "No sooner ___ the presentation than the fire alarm went off.",
-      choices: ["he had finished", "did he finish", "had he finished", "he finished"],
+      choices: ["he had finished", "he did finish", "had he finished", "he finished"],
       correctIndex: 2,
       explanation: "'No sooner...than' triggers inversion with the past perfect: 'no sooner had he finished.'",
     },
@@ -83,10 +83,10 @@ const part1: GrammarPart = {
     },
     {
       id: "g1-q12",
-      prompt: "The engineers must ensure that the bridge ___ strict safety codes.",
-      choices: ["meets", "meet", "is meeting", "met"],
-      correctIndex: 2,
-      explanation: "The mandative subjunctive after 'ensure that' uses the base form of the verb regardless of subject.",
+      prompt: "The engineers recommended that the bridge ___ strict safety codes.",
+      choices: ["is meeting", "meet", "was meeting", "met"],
+      correctIndex: 1,
+      explanation: "The mandative subjunctive after 'recommended that' uses the base form 'meet'.",
     },
     {
       id: "g1-q13",

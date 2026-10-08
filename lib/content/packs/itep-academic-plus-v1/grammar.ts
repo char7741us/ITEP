@@ -63,7 +63,7 @@ const part1: GrammarPart = {
     {
       id: "g1-q9",
       prompt: "The evidence suggests that climate change is occurring at a much faster rate than ___ previously.",
-      choices: ["believed", "believes", "was believed", "has believing"],
+      choices: ["belief", "believes", "was believed", "has believing"],
       correctIndex: 2,
       explanation: "An impersonal passive construction is needed here: 'than was believed' (previously), matching the past reference.",
     },
@@ -77,7 +77,7 @@ const part1: GrammarPart = {
     {
       id: "g1-q11",
       prompt: "Despite ___ warned about the risks, investors continued to pour money into the venture.",
-      choices: ["being", "have been", "to be", "having been"],
+      choices: ["be", "have been", "to be", "having been"],
       correctIndex: 3,
       explanation: "'Despite' is followed by a gerund; since the warning happened earlier, the perfect passive gerund 'having been warned' is required.",
     },
@@ -212,15 +212,15 @@ const part2: GrammarPart = {
     },
     {
       id: "g2-q10",
-      prompt: "Having finished the experiment, the results were analyzed carefully by the research team.",
+      prompt: "After completing the experiment, the research team analyzed the results careful before publishing them.",
       choices: [
-        "Having finished the experiment,",
-        "carefully by",
-        "the results were analyzed",
+        "After completing the experiment,",
         "the research team",
+        "analyzed the results careful.",
+        "before publishing them.",
       ],
       correctIndex: 2,
-      explanation: "Dangling modifier: it was the research team, not 'the results', that finished the experiment. It should read '...the research team analyzed the results carefully.'",
+      explanation: "The verb 'analyzed' needs the adverb 'carefully', not the adjective 'careful'.",
     },
     {
       id: "g2-q11",

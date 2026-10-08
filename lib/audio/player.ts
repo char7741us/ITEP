@@ -176,8 +176,10 @@ export function playListeningScript(lines: ListeningLine[], onDone: () => void):
     const speakerIndex = knownSpeakers.indexOf(line.speaker);
     utterance.pitch = speakerIndex % 2 === 0 ? 1 : 1.08;
 
+    let advanced = false;
     const advance = () => {
-      if (cancelled) return;
+      if (cancelled || advanced) return;
+      advanced = true;
       clearSafetyTimer();
       // A brief natural pause between lines — longer on a speaker change so
       // turn-taking doesn't sound rushed, shorter mid-speaker for pacing.

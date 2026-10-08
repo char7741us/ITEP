@@ -5,10 +5,10 @@ import { EXAM_MODE_LABELS } from "@/lib/types/mode";
 import type { AttemptRecord } from "@/lib/types/attempt";
 
 export function AttemptHistoryTable({ attempts }: { attempts: AttemptRecord[] }) {
-  const completed = attempts.filter((a) => a.status === "completed" && a.scores);
+  const visible = attempts.filter((a) => a.status === "in_progress" || (a.status === "completed" && a.scores));
 
-  if (completed.length === 0) {
-    return <p className="text-sm text-muted-foreground">Todavía no has completado ningún simulacro.</p>;
+  if (visible.length === 0) {
+    return <p className="text-sm text-muted-foreground">Todavía no has comenzado ningún simulacro.</p>;
   }
 
   return (
@@ -23,17 +23,17 @@ export function AttemptHistoryTable({ attempts }: { attempts: AttemptRecord[] })
         </TableRow>
       </TableHeader>
       <TableBody>
-        {completed.map((attempt) => (
+        {visible.map((attempt) => (
           <TableRow key={attempt.id}>
             <TableCell>{new Date(attempt.startedAt).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" })}</TableCell>
             <TableCell>{EXAM_MODE_LABELS[attempt.mode]}</TableCell>
-            <TableCell className="tabular-nums">{attempt.scores!.overall.toFixed(1)}</TableCell>
+            <TableCell className="tabular-nums">{attempt.scores ? `${attempt.scores.overall.toFixed(1)}${attempt.gradingErrors?.length ? " (parcial)" : ""}` : "En curso"}</TableCell>
             <TableCell>
-              <CEFRBandBadge band={attempt.scores!.overallBand} />
+              {attempt.scores ? <CEFRBandBadge band={attempt.scores.overallBand} /> : "—"}
             </TableCell>
             <TableCell>
-              <Link href={`/results/${attempt.id}`} className="text-sm font-medium text-primary hover:underline">
-                Ver detalle
+              <Link href={attempt.status === "in_progress" ? `/exam/run/${attempt.id}` : `/results/${attempt.id}`} className="text-sm font-medium text-primary hover:underline">
+                {attempt.status === "in_progress" ? "Continuar" : "Ver detalle"}
               </Link>
             </TableCell>
           </TableRow>

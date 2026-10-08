@@ -13,10 +13,14 @@ const twinQuestionSchema = z.object({
   options: z.array(z.string().trim().min(1)).length(4),
   correctIndex: z.number().int().min(0).max(3),
   explanation: z.string().trim().min(1),
+}).refine((question) => new Set(question.options.map((option) => option.toLocaleLowerCase().trim())).size === 4, {
+  message: "Las cuatro opciones deben ser distintas.",
 });
 
 const twinsSchema = z.object({
   questions: z.array(twinQuestionSchema).length(3),
+}).refine((result) => new Set(result.questions.map((question) => question.question.toLocaleLowerCase().trim())).size === 3, {
+  message: "Las tres preguntas deben ser distintas.",
 });
 
 const responseSchema = {

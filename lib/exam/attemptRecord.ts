@@ -14,7 +14,7 @@ export function createAttemptRecord(mode: ExamMode, contentPack: ExamContentPack
     mode,
     status: "in_progress",
     startedAt: new Date().toISOString(),
-    currentSection: "reading",
+    currentSection: "grammar",
     sectionTimings: {},
     responses: createEmptyResponses(),
   };
@@ -78,6 +78,7 @@ export function buildCompletedAttemptRecord(base: AttemptRecord, context: ExamMa
         })),
     },
     scores: context.scores ?? undefined,
+    gradingErrors: context.gradingErrors,
   };
 }
 

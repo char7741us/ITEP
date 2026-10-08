@@ -146,6 +146,6 @@ Critics caution against overstating these findings. The placebo effect is genera
 };
 
 export const readingContent = {
-  totalTimeSeconds: 25 * 60,
+  totalTimeSeconds: 20 * 60,
   parts: [part1, part2] as [ReadingPart, ReadingPart],
 };

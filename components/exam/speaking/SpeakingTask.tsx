@@ -9,9 +9,10 @@ interface SpeakingTaskProps {
   taskNumber: 1 | 2;
   responseSeconds: number;
   onRecorded: (blob: Blob) => void;
+  onRecordingFailed: () => void;
 }
 
-export function SpeakingTask({ title, prompt, taskNumber, responseSeconds, onRecorded }: SpeakingTaskProps) {
+export function SpeakingTask({ title, prompt, taskNumber, responseSeconds, onRecorded, onRecordingFailed }: SpeakingTaskProps) {
   return (
     <div className="space-y-4">
       <Card className="border-primary/20">
@@ -34,7 +35,7 @@ export function SpeakingTask({ title, prompt, taskNumber, responseSeconds, onRec
           <p className="text-sm leading-relaxed text-muted-foreground">{prompt}</p>
         </CardContent>
       </Card>
-      <RecorderControls onRecorded={onRecorded} />
+      <RecorderControls onRecorded={onRecorded} onRecordingFailed={onRecordingFailed} />
     </div>
   );
 }
