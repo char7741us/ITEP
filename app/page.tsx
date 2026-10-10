@@ -26,7 +26,7 @@ export default function Home() {
           <CardHeader>
             <CardTitle>Modo Práctica</CardTitle>
             <CardDescription>
-              Practica con una combinación variable de preguntas y revisa tus errores al terminar.
+              Rota por seis simulacros completos con textos, audios y preguntas diferentes; revisa tus errores al terminar.
             </CardDescription>
           </CardHeader>
         </Card>

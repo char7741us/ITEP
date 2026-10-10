@@ -16,12 +16,12 @@ const MODE_OPTIONS: { value: ExamMode; description: string }[] = [
   {
     value: "practice",
     description:
-      "Practica con una combinación variable de textos y preguntas originales, con los mismos tiempos del simulacro.",
+      "Practica con uno de seis simulacros nuevos completos, con textos, audios y preguntas diferentes.",
   },
   {
     value: "intensive",
     description:
-      "Sin pausas ni repetición de audio; usa otro conjunto de combinaciones para medir tu nivel.",
+      "Sin pausas ni repetición de audio; avanza al siguiente banco completo de contenido.",
   },
 ];
 
