@@ -6,6 +6,7 @@ import { dailySessions } from "@/lib/content/daily/build";
 import { dailyProgressKey, useDailyProgressStore } from "@/lib/content/daily/progress";
 import { useActiveProfile } from "@/lib/storage/profileRepo";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StudyStatus } from "@/components/learning/StudyStatus";
 
 export default function DailyPracticePage() {
   const profile = useActiveProfile();
@@ -24,6 +25,7 @@ export default function DailyPracticePage() {
         <p className="text-sm text-muted-foreground">Material original inspirado en el formato iTEP Academic, no preguntas oficiales. Tus respuestas se guardan en este navegador{profile ? ` para ${profile.name}` : " como invitado"}.</p>
         <p className="font-medium" aria-live="polite">{hydrated ? `${completeCount} de 60 sesiones completadas` : "Cargando avance guardado…"}</p>
       </div>
+      <StudyStatus />
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {dailySessions.map((session) => {
           const progress = days[dailyProgressKey(profile?.username ?? null, session.day)];

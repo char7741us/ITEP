@@ -11,6 +11,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AttemptHistoryTable } from "@/components/dashboard/AttemptHistoryTable";
 import { SkillTrendChart } from "@/components/dashboard/SkillTrendChart";
 import { WeakestSkillCallout } from "@/components/dashboard/WeakestSkillCallout";
+import { StudyCalendar } from "@/components/learning/StudyCalendar";
+import { StudyStatus } from "@/components/learning/StudyStatus";
 
 export default function DashboardPage() {
   const profile = useActiveProfile();
@@ -41,6 +43,9 @@ export default function DashboardPage() {
           </AlertDescription>
         </Alert>
       )}
+
+      <StudyStatus />
+      <StudyCalendar />
 
       {attempts === null ? (
         <p className="text-sm text-muted-foreground">Cargando...</p>

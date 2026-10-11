@@ -22,6 +22,7 @@ import { WritingTask } from "@/components/exam/writing/WritingTask";
 import { PrepCountdown } from "@/components/exam/speaking/PrepCountdown";
 import { SpeakingTask } from "@/components/exam/speaking/SpeakingTask";
 import { Button } from "@/components/ui/button";
+import { recordLearningActivity } from "@/lib/learning/store";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function ExamRunPage() {
@@ -89,7 +90,17 @@ function ExamMachineView({ attempt, contentPack }: { attempt: AttemptRecord; con
   const legacyOrder = state.context.examOrderVersion !== 2;
 
   useEffect(() => {
+    let previous = actorRef.getSnapshot().context;
     const subscription = actorRef.subscribe((snapshot) => {
+      for (const skill of ["grammar", "reading", "listening"] as const) {
+        if (snapshot.context[skill].responses === previous[skill].responses) continue;
+        for (const response of Object.values(snapshot.context[skill].responses)) {
+          if (response.selectedIndex !== null && previous[skill].responses[response.itemId]?.selectedIndex == null) {
+            void recordLearningActivity(attempt.profileUsername ?? null, { id: `exam:${attempt.id}:${skill}:${response.itemId}`, kind: "question", skill, label: `Pregunta de ${skill}` });
+          }
+        }
+      }
+      previous = snapshot.context;
       if (snapshot.status === "done") {
         clearRuntimeSnapshot(attempt.id);
       } else {
@@ -97,7 +108,7 @@ function ExamMachineView({ attempt, contentPack }: { attempt: AttemptRecord; con
       }
     });
     return () => subscription.unsubscribe();
-  }, [actorRef, attempt.id]);
+  }, [actorRef, attempt.id, attempt.profileUsername]);
 
   const isTiming =
     state.matches("reading") ||
@@ -130,6 +141,7 @@ function ExamMachineView({ attempt, contentPack }: { attempt: AttemptRecord; con
     const blobKey = `${attempt.id}:${taskNumber}`;
     try {
       await saveSpeakingAudio(blobKey, blob);
+      void recordLearningActivity(attempt.profileUsername ?? null, { id: `exam:${attempt.id}:speaking:${taskNumber}`, kind: "speaking", skill: "speaking", label: `Speaking · tarea ${taskNumber}` });
       send({ type: "SAVE_SPEAKING_RECORDING", taskNumber, blobKey });
     } catch (error) {
       console.error("No se pudo guardar la grabación:", error);

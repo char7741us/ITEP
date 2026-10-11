@@ -139,3 +139,25 @@
     font-weight: 700;
   }
 }
+
+@layer components {
+  .study-eyebrow { @apply font-mono text-[10px] font-medium tracking-[.12em] text-primary/65; }
+  .study-card { @apply rounded-[1.75rem] border border-primary/10 bg-card p-5 sm:p-6; }
+  .study-hero { background: radial-gradient(ellipse at 100% 0%, #f6d9df 0%, transparent 65%), linear-gradient(130deg, #f9edce, #fcf3e4 70%); }
+  .pet-habitat { background: radial-gradient(ellipse at 50% 55%, #fcf5df 0%, #e5eee0 50%, #d4e4d6 100%); }
+  .pet-float { transform-origin: center; animation: pet-float 5s ease-in-out infinite; }
+  .pet-leaf { transform-origin: 129px 68px; animation: pet-leaf 5s ease-in-out infinite; }
+  .pet-blink { transform-box: fill-box; transform-origin: center; animation: pet-blink 7s infinite; }
+  .pet-sparkle { animation: pet-sparkle 4s ease-in-out infinite; }
+  .pet-hearts { animation: pet-greet 700ms ease-out both; }
+  .study-celebration { animation: pet-greet 350ms ease-out both; }
+}
+@keyframes pet-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@keyframes pet-leaf { 0%,100% { transform: rotate(-3deg); } 50% { transform: rotate(5deg); } }
+@keyframes pet-blink { 0%,43%,47%,100% { transform: scaleY(1); } 45% { transform: scaleY(.12); } }
+@keyframes pet-sparkle { 0%,100% { opacity: .4; } 50% { opacity: .9; } }
+@keyframes pet-greet { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) {
+  .pet-float, .pet-leaf, .pet-blink, .pet-sparkle, .pet-hearts, .study-celebration { animation: none !important; }
+  .companion-dock, .study-hero *, .pet-habitat * { transition: none !important; }
+}

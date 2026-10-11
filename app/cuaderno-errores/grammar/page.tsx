@@ -12,6 +12,11 @@ import { notebookProfileKey, useErrorNotebookStore } from "@/lib/notebook/store"
 import { useActiveProfile } from "@/lib/storage/profileRepo";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { dateKey } from "@/lib/learning/model";
+import { recordLearningActivity } from "@/lib/learning/store";
+import { CoachHelpButton } from "@/components/learning/CoachHelpButton";
+import { StudyStatus } from "@/components/learning/StudyStatus";
+import { PracticeMoment } from "@/components/learning/PracticeMoment";
 
 const labels: Mark[] = ["A", "B", "C", "D"];
 const roundSize = 5;
@@ -30,6 +35,7 @@ export default function GrammarC1Page() {
   const [roundCorrect, setRoundCorrect] = useState(0);
   const [finished, setFinished] = useState(false);
   const answeredRef = useRef(false);
+  const roundIdRef = useRef("");
 
   useEffect(() => {
     let mounted = true;
@@ -55,6 +61,7 @@ export default function GrammarC1Page() {
   async function startTopic(topicId: string) {
     const chosen = grammarC1Topics.find((item) => item.id === topicId);
     if (!chosen) return;
+    roundIdRef.current = crypto.randomUUID();
     if (!useGrammarProgressStore.persist.hasHydrated()) await useGrammarProgressStore.persist.rehydrate();
     const round = useGrammarProgressStore.getState().startRound(profileKey, topicId);
     const errorIndexes = chosen.questions.flatMap((item, index) => item.kind === "error-word" ? [index] : []);
@@ -81,6 +88,7 @@ export default function GrammarC1Page() {
   async function startDay(dayNumber: number) {
     const chosen = grammarC1Days.find((item) => item.day === dayNumber);
     if (!chosen) return;
+    roundIdRef.current = crypto.randomUUID();
     if (!useGrammarProgressStore.persist.hasHydrated()) await useGrammarProgressStore.persist.rehydrate();
     setRoundRefs(chosen.refs);
     setActiveTopicId(null);
@@ -103,6 +111,7 @@ export default function GrammarC1Page() {
     answeredRef.current = true;
     const correct = mark === answerKey;
     useGrammarProgressStore.getState().recordAnswer(profileKey, topic.id, `${topic.id}:${questionRef.index}`, correct);
+    void recordLearningActivity(profile?.username ?? null, { id: `grammar:${dateKey(new Date())}:${topic.id}:${questionRef.index}`, kind: "question", skill: "grammar", label: topic.title });
     setSelected(mark);
     if (correct) setRoundCorrect((value) => value + 1);
   }
@@ -110,6 +119,8 @@ export default function GrammarC1Page() {
   function next() {
     if (position === roundRefs.length - 1) {
       if (day) useGrammarProgressStore.getState().recordDayResult(profileKey, day.day, roundCorrect, roundRefs.length);
+      const passedDay = day && roundCorrect >= Math.ceil(roundRefs.length * 0.85);
+      void recordLearningActivity(profile?.username ?? null, { id: passedDay ? `grammar-history:${day.day}` : `grammar-round:${roundIdRef.current}`, kind: "round", skill: "grammar", label: day ? `Día ${day.day} de Grammar ${passedDay ? "aprobado" : "practicado"}` : `Ronda de ${topic.title} completada` });
       setFinished(true);
     }
     else {
@@ -121,6 +132,7 @@ export default function GrammarC1Page() {
 
   return (
     <main className="mx-auto w-full max-w-6xl space-y-6 px-4 py-8 sm:py-12">
+      <StudyStatus />
       <Link href="/cuaderno-errores" className="inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline"><ArrowLeft className="h-4 w-4" /> Volver al Cuaderno de Errores</Link>
 
       <section className="relative overflow-hidden rounded-[2rem] border border-primary/15 bg-gradient-to-br from-[#e9e6ff] via-[#fff4f7] to-[#fff0c3] p-6 shadow-sm dark:from-[#37315b] dark:via-[#5f3046] dark:to-[#66502f] sm:p-9">
@@ -175,6 +187,8 @@ export default function GrammarC1Page() {
                 <div role="status" className={cn("mt-6 rounded-2xl border p-4", selected === answerKey ? "border-green-300 bg-green-50 dark:bg-green-950/40" : "border-amber-300 bg-amber-50 dark:bg-amber-950/40")}>
                   <p className="font-extrabold">{selected === answerKey ? "¡Exacto! 🥳" : question.kind === "error-word" ? `Casi. La palabra incorrecta es ${answerKey}: «${wordOptions[labels.indexOf(answerKey!)]?.text}». 💡` : `Casi. La opción correcta es ${answerKey}: «${question.choices[labels.indexOf(answerKey!)]}». 💡`}</p>
                   <p className="mt-2 text-sm leading-relaxed">{question.explanation}</p>
+                  <CoachHelpButton skill="Grammar" question={question.sentence} explanation={question.explanation} />
+                  {position === 2 && <div className="mt-4"><PracticeMoment question={question.sentence} explanation={question.explanation} /></div>}
                   <p className="mt-2 rounded-xl bg-white/70 p-3 text-sm dark:bg-white/10"><span className="font-bold">Oración correcta:</span> <span lang="en">{question.kind === "error-word" ? correctedSentence(question) : completedSentence(question)}</span></p>
                   <Button className="mt-4" onClick={next}>{position === roundRefs.length - 1 ? "Ver mi resultado" : "Siguiente pregunta"}<ArrowRight className="h-4 w-4" /></Button>
                 </div>

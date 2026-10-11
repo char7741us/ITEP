@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Bricolage_Grotesque, Instrument_Serif, JetBrains_Mono } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Header } from "@/components/common/Header";
+import { LearningProvider } from "@/components/learning/LearningProvider";
+import { LearningOverlay } from "@/components/learning/LearningOverlay";
 import "./globals.css";
 
 const bricolage = Bricolage_Grotesque({
@@ -34,8 +36,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <TooltipProvider>
-          <Header />
-          <main className="flex flex-1 flex-col">{children}</main>
+          <LearningProvider>
+            <Header />
+            <main className="flex flex-1 flex-col">{children}</main>
+            <LearningOverlay />
+          </LearningProvider>
         </TooltipProvider>
       </body>
     </html>

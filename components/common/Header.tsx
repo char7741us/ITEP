@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { ProfileControl } from "@/components/profile/ProfileControl";
 
 const NAV_ITEMS = [
-  { href: "/", label: "Inicio" },
+  { href: "/", label: "Mi espacio" },
   { href: "/exam/new", label: "Nuevo simulacro" },
   { href: "/practica-diaria", label: "Práctica diaria" },
   { href: "/dashboard", label: "Progreso" },
@@ -19,30 +19,35 @@ export function Header() {
 
   return (
     <header className="border-b bg-background">
-      <div className="mx-auto flex min-h-14 w-full max-w-5xl flex-wrap items-center justify-between gap-2 px-4 py-2">
+      <div className="mx-auto flex min-h-14 w-full max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-3">
         <Link href="/" className="flex items-baseline gap-2">
           <span className="font-semibold tracking-tight">iTEP Simulator</span>
           <span className="font-signature text-base italic text-primary/70">
             by Michh <span aria-hidden="true">💕</span>
           </span>
         </Link>
-        <div className="flex items-center gap-2">
-          <nav className="flex items-center gap-1">
-            {NAV_ITEMS.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "rounded-md px-3 py-1.5 text-sm font-medium transition-colors hover:bg-muted",
-                  pathname === item.href ? "text-foreground" : "text-muted-foreground"
-                )}
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
+        <div className="ml-auto">
           <ProfileControl />
         </div>
+        <nav
+          aria-label="Navegación principal"
+          className="order-last flex w-full items-center gap-1 overflow-x-auto pb-1 sm:pb-0 lg:order-none lg:w-auto"
+        >
+          {NAV_ITEMS.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted",
+                pathname === item.href
+                  ? "bg-secondary/40 text-foreground"
+                  : "text-muted-foreground",
+              )}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
       </div>
     </header>
   );

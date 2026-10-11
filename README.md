@@ -10,8 +10,12 @@ Simulacro de práctica completo para el examen **iTEP Academic-Plus**, construid
 - **Rubric detallado** con 4 dimensiones de evaluación (Fluidez, Gramática, Vocabulario, Coherencia)
 - **Niveles CEFR** automáticos (Below B2, B2, C1, C2)
 - **Dashboard de progreso** con gráficos de tendencia por habilidad
+- **Mi espacio de estudio**: misión personalizada, calendario mensual de actividad, racha real, meta diaria ajustable, ocho logros y destellos por esfuerzo; todo persistido localmente y separado por perfil
+- **Compañero virtual Mochi**: ilustración animada, nombre y colores personalizables; niveles y accesorios desbloqueables sin perder avances por descansar; respeta movimiento reducido
+- **Coach de estudio** con Gemini: planes basados en resultados, reglas pendientes y feedback; explicaciones contextuales y microretos interactivos en el inicio y las áreas de práctica. Guía local cuando la IA no está disponible; oculto durante simulacros
+- **Pausas interactivas** entre ejercicios: el estudiante elige un reto, aclarar una duda o descansar. Enfoque de 5/10/15 minutos que acompaña la navegación, se pausa al salir de la pestaña y no concede puntos por dejar correr el reloj
 - **Cuaderno de Errores** local: agrupa temas fallados, ofrece mini lecciones ilustradas y retos de tres preguntas; registra días de estudio y logros por perfil. Tres aciertos consecutivos dominan un tema
-- **Grammar C1 en 20 días** dentro del Cuaderno: 13 temas, 93 preguntas originales de detección de una palabra incorrecta, repasos mixtos y reto final con preguntas nuevas. El avance diario se guarda localmente por perfil; cada día se aprueba con al menos 80 % de aciertos
+- **Grammar C1 en 20 días** dentro del Cuaderno: 13 temas, 125 preguntas originales de detección de una palabra incorrecta y completar oraciones, repasos mixtos y reto final con preguntas nuevas. El avance diario se guarda localmente por perfil; cada día se aprueba con al menos 85 % de aciertos
 - **Reintento de calificación** en resultados: cuando Gemini falla, Writing y Speaking pueden calificarse posteriormente desde las respuestas ya guardadas sin repetir el simulacro
 - **6 simulacros completos nuevos** con lecturas, preguntas y audios distintos; los 2 bancos anteriores y sus 30 combinaciones permanecen disponibles para abrir resultados históricos, pero no se asignan a simulacros nuevos
 - **60 sesiones cortas de práctica** con Grammar, Reading, Listening, Writing y Speaking: 60 textos, 60 diálogos con audio de dos voces, 540 preguntas objetivas y 120 consignas de producción; avance local por perfil
@@ -85,10 +89,11 @@ npm run render:mock-audio  # Reconstruye los 36 audios de los seis simulacros nu
 │   ├── dashboard/          # Dashboard de progreso
 │   ├── cuaderno-errores/   # Práctica de temas fallados
 │   ├── practica-diaria/    # Plan de 60 sesiones originales
-│   └── api/                # API routes para calificación y ejercicios gemelos
+│   └── api/                # Calificación, ejercicios gemelos y coach
 ├── components/             # Componentes React
 │   ├── exam/               # Componentes del examen
 │   ├── dashboard/          # Componentes del dashboard
+│   ├── learning/           # Espacio de estudio, mascota, coach, calendario y enfoque
 │   └── results/            # Componentes de resultados
 ├── lib/                    # Lógica de negocio
 │   ├── audio/              # Grabación y reproducción de audio
@@ -97,6 +102,7 @@ npm run render:mock-audio  # Reconstruye los 36 audios de los seis simulacros nu
 │   ├── gemini/             # Integración con Google Gemini
 │   ├── grammar-c1/         # Banco, plan de 20 días y progreso local
 │   ├── notebook/           # Reglas falladas, estado persistente y rachas
+│   ├── learning/           # Actividad real, recompensas, enfoque y contrato del coach
 │   ├── storage/            # Persistencia (IndexedDB, localStorage)
 │   └── types/              # Definiciones TypeScript
 └── scripts/                # Scripts de validación
@@ -128,3 +134,9 @@ Las 60 sesiones de `/practica-diaria` y los seis simulacros nuevos usan escenari
 Cada sesión diaria es deliberadamente más corta que un simulacro completo: contiene tres preguntas de Grammar, tres de Reading, tres de Listening, una tarea de Writing y una de Speaking. Se alternan mensajes breves y ensayos, así como los dos tipos de Speaking. Los audios estáticos fueron sintetizados con las voces de macOS y no dependen de Gemini. El progreso queda en `localStorage` y las grabaciones en `IndexedDB` del mismo navegador; borrar los datos del sitio elimina ese avance.
 
 El plan `/cuaderno-errores/grammar` dedica cuatro días a subject–verb agreement, doce a los demás temas esenciales, tres a repasos mixtos y el último a un reto de trece preguntas inéditas. La guía oficial de iTEP permite identificar una palabra **o frase** incorrecta; este módulo usa deliberadamente solo palabras, como entrenamiento específico, y no es una certificación C1. No se reproducen preguntas oficiales.
+
+## Compañero, calendario y coach
+
+`itep-simulator:learning-companion` guarda actividad y personalización por perfil en localStorage. Una respuesta objetiva suma 5 destellos; una práctica oral o texto evaluado, 15; una ronda, 20; un tema superado, 30; una sesión diaria, 40; un simulacro completo, 80. Identificadores estables evitan sumar de nuevo por un autoguardado o una recarga. Abrir páginas, saludar a la mascota o dejar correr el enfoque no crea rachas. Los días se calculan en la zona horaria del navegador; antes de practicar hoy, la racha puede continuar desde ayer. Se recuperan sesiones, días de Grammar aprobados, temas superados y simulacros anteriores cuando hay una fecha guardada; no se inventan fechas para respuestas antiguas sin fecha.
+
+`POST /api/coach` valida consulta, contexto y un resumen acotado de progreso; Gemini devuelve texto estructurado y un microreto opcional, validado antes de mostrarlo. No envía nombre de perfil, grabaciones ni todos los intentos al proveedor. La conversación es temporal y la clave permanece en el servidor. Ante ausencia o fallo de IA se ofrece una guía local identificada como tal. El coach no es un evaluador oficial ni promete alcanzar C1 en un plazo. No aparece durante `/exam/run/*`. El avance de estudio permanece en este navegador: no hay sincronización entre dispositivos ni base de datos externa.

@@ -6,12 +6,18 @@ import { ArrowLeft, ArrowRight, BookOpen, Check, Flame, Headphones, Heart, Light
 import { loadContentPack } from "@/lib/content/loader";
 import { getCoachGuide } from "@/lib/notebook/coach";
 import { collectFailedTopics } from "@/lib/notebook/failedRules";
-import { consecutiveStudyDays, localStudyDate, notebookProfileKey, recordCompletedAttempt, useErrorNotebookStore } from "@/lib/notebook/store";
+import { notebookProfileKey, recordCompletedAttempt, useErrorNotebookStore } from "@/lib/notebook/store";
 import type { ErrorNotebookEntry } from "@/lib/notebook/store";
 import { listAttempts } from "@/lib/storage/attemptsRepo";
 import { useActiveProfile } from "@/lib/storage/profileRepo";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { recordLearningActivity } from "@/lib/learning/store";
+import { CoachHelpButton } from "@/components/learning/CoachHelpButton";
+import { useStudyOverview } from "@/lib/learning/useStudyOverview";
+import { dateKey } from "@/lib/learning/model";
+import { StudyStatus } from "@/components/learning/StudyStatus";
+import { PracticeMoment } from "@/components/learning/PracticeMoment";
 
 interface TwinQuestion {
   context: string;
@@ -64,7 +70,7 @@ function MasterySteps({ streak }: { streak: number }) {
 export default function ErrorNotebookPage() {
   const profile = useActiveProfile();
   const entries = useErrorNotebookStore((state) => state.entries);
-  const studyDaysByProfile = useErrorNotebookStore((state) => state.studyDaysByProfile);
+  const study = useStudyOverview();
   const masteredByProfile = useErrorNotebookStore((state) => state.masteredByProfile);
   const masteredTopics = useErrorNotebookStore((state) => state.masteredTopics);
   const productiveFeedback = useErrorNotebookStore((state) => state.productiveFeedback);
@@ -85,6 +91,7 @@ export default function ErrorNotebookPage() {
   const [showExampleExplanation, setShowExampleExplanation] = useState(false);
   const answeredRef = useRef(false);
   const requestRef = useRef<AbortController | null>(null);
+  const roundIdRef = useRef("");
 
   useEffect(() => {
     let mounted = true;
@@ -125,9 +132,8 @@ export default function ErrorNotebookPage() {
   const visibleEntries = entries.filter((entry) => entry.profileUsername === username);
   const activeEntry = visibleEntries.find((entry) => entry.id === activeId);
   const currentQuestion = questions?.[questionIndex];
-  const days = studyDaysByProfile[profileKey] ?? [];
-  const studiedToday = days.includes(localStudyDate(new Date()));
-  const dayStreak = hydrated ? consecutiveStudyDays(days, new Date()) : 0;
+  const studiedToday = study.stats.days.includes(dateKey(study.now));
+  const dayStreak = study.ready ? study.stats.streak : 0;
   const masteredCount = masteredByProfile[profileKey] ?? 0;
   const visibleMastered = (masteredTopics ?? []).filter((topic) => topic.profileUsername === username);
   const visibleProductive = (productiveFeedback ?? []).filter((item) => item.profileUsername === username);
@@ -148,6 +154,7 @@ export default function ErrorNotebookPage() {
     requestRef.current?.abort();
     const controller = new AbortController();
     requestRef.current = controller;
+    roundIdRef.current = crypto.randomUUID();
     setQuestions(null);
     setQuestionSource(null);
     setLoading(true);
@@ -183,6 +190,8 @@ export default function ErrorNotebookPage() {
     answeredRef.current = true;
     const correct = choiceIndex === currentQuestion.correctIndex;
     const reachedMastery = useErrorNotebookStore.getState().answer(activeEntry.id, correct);
+    void recordLearningActivity(username, { id: `notebook:${roundIdRef.current}:${questionIndex}`, kind: "question", skill: activeEntry.section.toLowerCase() as "grammar" | "reading" | "listening", label: `Cuaderno · ${activeEntry.section}` });
+    if (reachedMastery) void recordLearningActivity(username, { id: `mastery:${activeEntry.id}`, kind: "mastery", label: "Tema del Cuaderno superado", skill: activeEntry.section.toLowerCase() as "grammar" | "reading" | "listening" });
     setSelectedIndex(choiceIndex);
     setAnswered(true);
     if (correct) setCorrectCount((count) => count + 1);
@@ -220,6 +229,7 @@ export default function ErrorNotebookPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-7 px-4 py-8 sm:py-12">
+      <StudyStatus />
       <section className="relative overflow-hidden rounded-[2rem] border border-primary/15 bg-gradient-to-br from-[#ffe5ec] via-[#fffaf0] to-[#fff0bb] p-6 shadow-sm dark:from-[#6c2b43] dark:via-[#552033] dark:to-[#73552e] sm:p-9">
         <div className="absolute -right-10 -top-12 h-40 w-40 rounded-full border-[20px] border-white/35" aria-hidden="true" />
         <div className="relative flex flex-col items-center gap-4 sm:flex-row sm:justify-between sm:gap-8">
@@ -243,7 +253,7 @@ export default function ErrorNotebookPage() {
         <div className="rounded-3xl border border-primary/10 bg-white/80 p-4 shadow-sm dark:bg-card">
           <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground"><Flame className="h-4 w-4 text-[#d67d2b]" /> Constancia</div>
           <p className="mt-2 text-3xl font-extrabold">{dayStreak} <span className="text-sm font-medium">{dayStreak === 1 ? "día seguido" : "días seguidos"}</span></p>
-          <p className="mt-1 text-xs text-muted-foreground">Cuenta los días en que abriste un tema.</p>
+          <p className="mt-1 text-xs text-muted-foreground">Días con práctica real en cualquier área. <Link href="/" className="underline">Ver mi calendario</Link></p>
         </div>
         <div className="rounded-3xl border border-primary/10 bg-white/80 p-4 shadow-sm dark:bg-card">
           <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground"><BookOpen className="h-4 w-4 text-[#bf5374]" /> Por descubrir</div>
@@ -388,6 +398,8 @@ export default function ErrorNotebookPage() {
                         <p className="font-extrabold">{selectedIndex === currentQuestion.correctIndex ? "¡Sí! Encontraste la pista 🌟" : "Casi: aquí hay una pista nueva 🌱"}</p>
                         <p className="mt-2 text-sm">La respuesta es <strong lang="en">{currentQuestion.options[currentQuestion.correctIndex]}</strong>.</p>
                         <p className="mt-2 text-sm leading-relaxed">{currentQuestion.explanation}</p>
+                        <CoachHelpButton skill={activeEntry.section} question={currentQuestion.question} explanation={currentQuestion.explanation} />
+                        {questionIndex === 1 && <div className="mt-4"><PracticeMoment skill={activeEntry.section} question={currentQuestion.question} explanation={currentQuestion.explanation} /></div>}
                         {selectedIndex !== currentQuestion.correctIndex && <p className="mt-2 text-xs font-medium">Tu racha de aciertos vuelve a 0, pero puedes seguir practicando este tema.</p>}
                         <Button className="mt-4" onClick={nextQuestion}>{questionIndex === (questions?.length ?? 0) - 1 ? "Ver resultado" : "Siguiente pregunta"} <ArrowRight className="h-4 w-4" /></Button>
                       </div>
