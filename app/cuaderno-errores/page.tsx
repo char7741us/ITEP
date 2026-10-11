@@ -247,6 +247,11 @@ export default function ErrorNotebookPage() {
         </div>
       </div>
 
+      <Link href="/cuaderno-errores/grammar" className="group flex flex-col gap-4 rounded-[2rem] border border-[#bda6e9] bg-gradient-to-r from-[#efe8ff] via-[#fff2f6] to-[#fff4d6] p-5 shadow-sm transition-transform hover:-translate-y-0.5 dark:border-[#635184] dark:from-[#39304f] dark:via-[#573245] dark:to-[#564329] sm:flex-row sm:items-center sm:justify-between sm:p-7">
+        <div className="flex items-center gap-4"><span className="text-5xl" aria-hidden="true">🕵️‍♀️</span><div><p className="text-xs font-extrabold uppercase tracking-widest text-[#8052aa] dark:text-[#d4b7ff]">Sección especial</p><h2 className="mt-1 text-2xl font-black">Solo Grammar · camino a C1</h2><p className="mt-1 text-sm text-foreground/75">Todo tu mapa de temas, con prioridad en subject–verb agreement y ejercicios de encontrar una sola palabra incorrecta.</p></div></div>
+        <span className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground group-hover:bg-primary/90">Entrar a Grammar <ArrowRight className="h-4 w-4" /></span>
+      </Link>
+
       {activeId ? (
         <div className="space-y-5">
           <Button variant="outline" onClick={backToTopics}><ArrowLeft className="h-4 w-4" /> Volver a mis temas</Button>

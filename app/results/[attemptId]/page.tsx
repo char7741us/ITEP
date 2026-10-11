@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { getAttempt } from "@/lib/storage/attemptsRepo";
+import { getAttempt, saveAttempt } from "@/lib/storage/attemptsRepo";
 import { loadContentPack } from "@/lib/content/loader";
+import { retryMissingGrades } from "@/lib/exam/grading";
 import { getReadingItems, getGrammarItems } from "@/lib/exam/machine";
 import { getListeningItems } from "@/lib/exam/listening";
 import type { AttemptRecord } from "@/lib/types/attempt";
@@ -35,6 +36,8 @@ export default function ResultsPage() {
   const params = useParams<{ attemptId: string }>();
   const [attempt, setAttempt] = useState<AttemptRecord | null | undefined>(undefined);
   const [contentPack, setContentPack] = useState<ExamContentPack | null>(null);
+  const [retrying, setRetrying] = useState(false);
+  const [retryError, setRetryError] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -69,6 +72,25 @@ export default function ResultsPage() {
         ...(gradingErrors.some((error) => error.startsWith("Writing ")) ? ["writing"] : []),
         ...(gradingErrors.some((error) => error.startsWith("Speaking ")) ? ["speaking"] : []),
       ];
+  const canRetry = gradingErrors.length > 0 && (
+    attempt.responses.writing.some((response) => response.text.trim() && !response.grading) ||
+    attempt.responses.speaking.some((response) => response.audioBlobKey && !response.grading)
+  );
+
+  async function retryGrades() {
+    if (!attempt || !contentPack || retrying) return;
+    setRetrying(true);
+    setRetryError(null);
+    try {
+      const updated = await retryMissingGrades(attempt, contentPack);
+      await saveAttempt(updated);
+      setAttempt(updated);
+    } catch (error) {
+      setRetryError(error instanceof Error ? error.message : "No se pudo volver a intentar la calificación.");
+    } finally {
+      setRetrying(false);
+    }
+  }
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-10">
@@ -85,10 +107,12 @@ export default function ResultsPage() {
           <AlertTitle>Calificación incompleta</AlertTitle>
           <AlertDescription>
             La evaluación de IA no terminó para todas las respuestas. El promedio mostrado excluye las secciones sin
-            calificación; no lo interpretes como nota final. Puedes conservar tus respuestas y hacer otro simulacro.
+            calificación; no lo interpretes como nota final. Tus respuestas siguen guardadas en este navegador.
           </AlertDescription>
+          {canRetry && <Button className="mt-3" onClick={retryGrades} disabled={retrying}>{retrying ? "Calificando respuestas guardadas…" : "Reintentar Writing y Speaking"}</Button>}
         </Alert>
       )}
+      {retryError && <Alert variant="destructive"><AlertTitle>No se pudo guardar la nueva calificación</AlertTitle><AlertDescription>{retryError}</AlertDescription></Alert>}
       <ScoreSummaryCard scores={attempt.scores} isPartial={gradingErrors.length > 0} />
       <SectionBreakdownTable scores={attempt.scores} ungradedSections={ungradedSections} />
 

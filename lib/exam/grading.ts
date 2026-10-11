@@ -7,7 +7,8 @@ import { getListeningItems } from "./listening";
 import { scoreObjectiveSection, averageScore } from "./scoring";
 import { scoreToBand } from "./cefr";
 import type { ExamMachineContext } from "./machine.types";
-import type { AttemptScores, RubricResult } from "@/lib/types/attempt";
+import type { AttemptRecord, AttemptScores, RubricResult } from "@/lib/types/attempt";
+import type { ExamContentPack } from "@/lib/types/content";
 
 async function blobToBase64(blob: Blob): Promise<string> {
   const buffer = await blob.arrayBuffer();
@@ -30,7 +31,7 @@ async function fetchGrade(url: string, body: unknown): Promise<RubricResult> {
   return res.json();
 }
 
-async function gradeWritingTask(
+export async function gradeWritingTask(
   taskTitle: string,
   prompt: string,
   minWords: number,
@@ -41,7 +42,7 @@ async function gradeWritingTask(
   return fetchGrade("/api/grade/writing", { taskTitle, prompt, minWords, maxWords, studentText });
 }
 
-async function gradeSpeakingTask(taskTitle: string, prompt: string, blobKey: string | undefined): Promise<RubricResult | null> {
+export async function gradeSpeakingTask(taskTitle: string, prompt: string, blobKey: string | undefined): Promise<RubricResult | null> {
   if (!blobKey) return null;
   const blob = await getSpeakingAudio(blobKey);
   if (!blob) return null;
@@ -113,5 +114,53 @@ export async function gradeFullAttempt(context: ExamMachineContext): Promise<Gra
     writingGrades,
     speakingGrades,
     gradingErrors,
+  };
+}
+
+/** Re-evaluate only responses whose Gemini grade is still missing, preserving completed grades. */
+export async function retryMissingGrades(attempt: AttemptRecord, pack: ExamContentPack): Promise<AttemptRecord> {
+  const writing = attempt.responses.writing.map((response) => ({ ...response }));
+  const speaking = attempt.responses.speaking.map((response) => ({ ...response }));
+  const errors: string[] = [];
+
+  await Promise.all([
+    ...pack.writing.tasks.map(async (task) => {
+      const response = writing.find((item) => item.taskNumber === task.taskNumber);
+      if (!response?.text.trim() || response.grading) return;
+      try {
+        response.grading = (await gradeWritingTask(task.title, task.prompt, task.minWords, task.maxWords, response.text)) ?? undefined;
+      } catch (error) {
+        errors.push(`Writing Tarea ${task.taskNumber}: ${error instanceof Error ? error.message : "No se pudo calificar."}`);
+      }
+    }),
+    ...pack.speaking.tasks.map(async (task) => {
+      const response = speaking.find((item) => item.taskNumber === task.taskNumber);
+      if (!response?.audioBlobKey || response.grading) return;
+      try {
+        const grade = await gradeSpeakingTask(task.title, task.prompt, response.audioBlobKey);
+        if (grade) response.grading = grade;
+        else errors.push(`Speaking Tarea ${task.taskNumber}: No se encontró el audio guardado en este navegador.`);
+      } catch (error) {
+        errors.push(`Speaking Tarea ${task.taskNumber}: ${error instanceof Error ? error.message : "No se pudo calificar."}`);
+      }
+    }),
+  ]);
+
+  const writingScores = writing.flatMap((response) => response.grading ? [response.grading.score] : []);
+  const speakingScores = speaking.flatMap((response) => response.grading ? [response.grading.score] : []);
+  const writingScore = writingScores.length ? averageScore(writingScores) : 0;
+  const speakingScore = speakingScores.length ? averageScore(speakingScores) : 0;
+  const previous = attempt.scores;
+  if (!previous) return attempt;
+  const overallSections = [previous.reading, previous.listening, previous.grammar];
+  if (!errors.some((error) => error.startsWith("Writing "))) overallSections.push(writingScore);
+  if (!errors.some((error) => error.startsWith("Speaking "))) overallSections.push(speakingScore);
+  const overall = averageScore(overallSections);
+
+  return {
+    ...attempt,
+    responses: { ...attempt.responses, writing, speaking },
+    gradingErrors: errors,
+    scores: { ...previous, writing: writingScore, speaking: speakingScore, overall, overallBand: scoreToBand(overall).band },
   };
 }
