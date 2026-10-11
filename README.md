@@ -108,7 +108,7 @@ npm run render:mock-audio  # Reconstruye los 36 audios de los seis simulacros nu
 - **UI**: React 19 + TypeScript
 - **Estilos**: Tailwind CSS v4 + shadcn/ui
 - **State**: XState v5 (máquina de estados del examen)
-- **IA**: Google Gemini (gemini-3.8-flash, con respaldo gemini-3.5-flash-lite) para calificación
+- **IA**: Google Gemini (Flash-Lite para Writing y Flash 3.8 para Speaking, con respaldo cruzado) para calificación
 - **Almacenamiento**: IndexedDB + localStorage
 - **Tests**: Vitest + Testing Library
 

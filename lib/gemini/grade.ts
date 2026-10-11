@@ -1,15 +1,15 @@
 import { ApiError, ThinkingLevel } from "@google/genai";
-import { getGeminiClient, GRADING_MODELS } from "./provider";
+import { getGeminiClient, GRADING_MODELS, WRITING_MODELS } from "./provider";
 import type { RubricResult } from "@/lib/types/attempt";
 import { buildWritingGradingPrompt, writingResponseSchema } from "./rubrics/writingRubric";
 import { buildSpeakingGradingPrompt, speakingResponseSchema } from "./rubrics/speakingRubric";
 
-async function callGemini(contents: unknown, responseSchema: object): Promise<RubricResult> {
+async function callGemini(contents: unknown, responseSchema: object, models: readonly string[] = GRADING_MODELS): Promise<RubricResult> {
   const client = getGeminiClient();
   let response;
   let lastError: unknown;
 
-  for (const [index, model] of GRADING_MODELS.entries()) {
+  for (const [index, model] of models.entries()) {
     try {
       response = await client.models.generateContent({
         model,
@@ -26,8 +26,8 @@ async function callGemini(contents: unknown, responseSchema: object): Promise<Ru
       break;
     } catch (error) {
       lastError = error;
-      const hasFallback = index < GRADING_MODELS.length - 1;
-      const canRetryWithFallback = error instanceof ApiError && [404, 429, 503].includes(error.status);
+      const hasFallback = index < models.length - 1;
+      const canRetryWithFallback = error instanceof ApiError && [404, 408, 429, 500, 502, 503, 504].includes(error.status);
       if (!hasFallback || !canRetryWithFallback) throw error;
     }
   }
@@ -50,7 +50,7 @@ export async function gradeWriting(params: {
   studentText: string;
 }): Promise<RubricResult> {
   const promptText = buildWritingGradingPrompt(params);
-  return callGemini([{ role: "user", parts: [{ text: promptText }] }], writingResponseSchema);
+  return callGemini([{ role: "user", parts: [{ text: promptText }] }], writingResponseSchema, WRITING_MODELS);
 }
 
 export async function gradeSpeaking(params: {
