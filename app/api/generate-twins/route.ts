@@ -54,7 +54,7 @@ export async function POST(request: Request) {
   }
 
   const bankTwins = getBankTwins(input.section, input.failed_rule);
-  if (!/^AIza[\w-]{30,}$/.test(process.env.GEMINI_API_KEY ?? "")) {
+  if (!(process.env.GEMINI_API_KEY ?? "").trim()) {
     if (bankTwins) return Response.json({ questions: bankTwins, source: "bank" });
     return Response.json(
       { error: "Todavía no hay tres preguntas del banco para esta regla y la IA no está configurada. La mini lección sí está disponible." },
