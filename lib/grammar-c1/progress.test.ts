@@ -34,4 +34,17 @@ describe("Grammar C1 progress", () => {
     expect(result.completedAt).toBeTruthy();
     expect(localStorage.getItem("itep-simulator:grammar-c1-progress")).toContain('"completedAt"');
   });
+
+  it("keeps an earlier approval without comparing scores from different day lengths", () => {
+    const store = useGrammarProgressStore.getState();
+    store.recordDayResult("guest", 1, 5, 5);
+    const approvedAt = useGrammarProgressStore.getState().daysByProfile.guest[1].completedAt;
+    store.recordDayResult("guest", 1, 2, 7);
+    expect(useGrammarProgressStore.getState().daysByProfile.guest[1]).toMatchObject({
+      attempts: 2,
+      bestCorrect: 2,
+      total: 7,
+      completedAt: approvedAt,
+    });
+  });
 });

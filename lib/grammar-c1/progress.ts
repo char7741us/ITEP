@@ -75,7 +75,7 @@ export const useGrammarProgressStore = create<GrammarProgressState>()(
                 ...state.daysByProfile[profileKey],
                 [day]: {
                   attempts: (existing?.attempts ?? 0) + 1,
-                  bestCorrect: Math.max(existing?.bestCorrect ?? 0, correct),
+                  bestCorrect: existing?.total === total ? Math.max(existing.bestCorrect, correct) : correct,
                   total,
                   completedAt: existing?.completedAt ?? (passed ? new Date().toISOString() : undefined),
                 },

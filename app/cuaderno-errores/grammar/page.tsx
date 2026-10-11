@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, CalendarDays, Check, CircleHelp, RotateCcw, Sparkles, Target } from "lucide-react";
-import { correctedSentence, grammarC1Topics, sentenceParts } from "@/lib/grammar-c1/bank";
+import { completedSentence, correctedSentence, grammarC1Topics, sentenceParts } from "@/lib/grammar-c1/bank";
 import type { Mark } from "@/lib/grammar-c1/bank";
 import { grammarC1Days } from "@/lib/grammar-c1/plan";
 import type { QuestionRef } from "@/lib/grammar-c1/plan";
@@ -44,6 +44,8 @@ export default function GrammarC1Page() {
   const questionRef = roundRefs[position];
   const topic = grammarC1Topics.find((item) => item.id === questionRef?.topicId) ?? selectedTopic ?? grammarC1Topics[0];
   const question = questionRef ? topic.questions[questionRef.index] : null;
+  const answerKey = question?.kind === "error-word" ? question.wrong : question?.correct;
+  const wordOptions = question?.kind === "error-word" ? sentenceParts(question.sentence).filter((part) => part.mark) : [];
   const topicProgress = progressByProfile[profileKey] ?? {};
   const dayProgress = daysByProfile[profileKey] ?? {};
   const completedDays = grammarC1Days.filter((item) => dayProgress[item.day]?.completedAt).length;
@@ -55,9 +57,12 @@ export default function GrammarC1Page() {
     if (!chosen) return;
     if (!useGrammarProgressStore.persist.hasHydrated()) await useGrammarProgressStore.persist.rehydrate();
     const round = useGrammarProgressStore.getState().startRound(profileKey, topicId);
-    const count = Math.min(roundSize, chosen.questions.length);
-    const first = (round * count) % chosen.questions.length;
-    setRoundRefs(Array.from({ length: count }, (_, offset) => ({ topicId, index: (first + offset) % chosen.questions.length })));
+    const errorIndexes = chosen.questions.flatMap((item, index) => item.kind === "error-word" ? [index] : []);
+    const completionIndexes = chosen.questions.flatMap((item, index) => item.kind === "complete-sentence" ? [index] : []);
+    const errors = Array.from({ length: Math.min(3, errorIndexes.length) }, (_, offset) => errorIndexes[(round * 3 + offset) % errorIndexes.length]);
+    const completions = Array.from({ length: Math.min(2, completionIndexes.length) }, (_, offset) => completionIndexes[(round * 2 + offset) % completionIndexes.length]);
+    const indexes = [errors[0], completions[0], errors[1], completions[1], errors[2]].filter((index): index is number => index !== undefined);
+    setRoundRefs(indexes.slice(0, roundSize).map((index) => ({ topicId, index })));
     setActiveTopicId(topicId);
     setActiveDay(null);
     setPosition(0);
@@ -96,7 +101,7 @@ export default function GrammarC1Page() {
   function answer(mark: Mark) {
     if (!topic || !question || answeredRef.current) return;
     answeredRef.current = true;
-    const correct = mark === question.wrong;
+    const correct = mark === answerKey;
     useGrammarProgressStore.getState().recordAnswer(profileKey, topic.id, `${topic.id}:${questionRef.index}`, correct);
     setSelected(mark);
     if (correct) setRoundCorrect((value) => value + 1);
@@ -124,7 +129,7 @@ export default function GrammarC1Page() {
           <div>
             <p className="mb-2 inline-flex items-center gap-2 rounded-full bg-white/75 px-3 py-1 text-xs font-extrabold uppercase tracking-wider text-primary dark:bg-white/10"><Sparkles className="h-3.5 w-3.5" /> Tu laboratorio de Grammar C1</p>
             <h1 className="text-3xl font-black leading-tight sm:text-5xl">Grammar C1 en 20 días 🕵️‍♀️</h1>
-            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-foreground/80 sm:text-base">Un día, una meta: recorre los 13 temas esenciales, repasa los errores que se esconden y termina con un reto mixto. Siempre eliges una sola palabra incorrecta y recibes una explicación.</p>
+            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-foreground/80 sm:text-base">Un día, una meta: recorre los 13 temas esenciales con los dos formatos de Grammar de iTEP. Completa oraciones, detecta errores y entiende cada corrección.</p>
           </div>
           <div className="rounded-3xl bg-white/80 p-5 text-center shadow-sm dark:bg-white/10" aria-label="Progreso de Grammar C1">
             <div className="text-4xl font-black text-primary">{hydrated ? completedQuestions : "…"}<span className="text-xl text-muted-foreground">/{totalQuestions}</span></div>
@@ -148,32 +153,29 @@ export default function GrammarC1Page() {
           {finished ? (
             <section className="rounded-[2rem] border border-primary/15 bg-white p-8 text-center shadow-sm dark:bg-card">
               <div className="text-6xl" aria-hidden="true">{roundCorrect >= Math.ceil(roundRefs.length * 0.8) ? "🌟" : "🌱"}</div>
-              <h3 className="mt-3 text-2xl font-black">{roundCorrect >= Math.ceil(roundRefs.length * 0.8) ? "¡Día aprobado!" : "¡Practiquemos otra vez!"}</h3>
+              <h3 className="mt-3 text-2xl font-black">{roundCorrect >= Math.ceil(roundRefs.length * 0.8) ? day ? "¡Día aprobado!" : "¡Ronda completada!" : "¡Practiquemos otra vez!"}</h3>
               <p className="mt-2 text-sm text-muted-foreground">Acertaste {roundCorrect} de {roundRefs.length}. {day ? `Para aprobar este día necesitas ${Math.ceil(roundRefs.length * 0.8)} aciertos. ` : ""}Tu progreso queda guardado en este navegador.</p>
               <div className="mt-5 flex flex-wrap justify-center gap-3"><Button onClick={() => day ? startDay(day.day) : startTopic(topic.id)}><RotateCcw className="h-4 w-4" /> Repetir {day ? "día" : "tema"}</Button>{day && day.day < 20 && <Button onClick={() => startDay(day.day + 1)}>Ir al día {day.day + 1} <ArrowRight className="h-4 w-4" /></Button>}<Button variant="outline" onClick={() => { setActiveTopicId(null); setActiveDay(null); }}>Ver el plan</Button></div>
             </section>
           ) : question ? (
-            <section className="rounded-[2rem] border border-primary/10 bg-white p-5 shadow-sm dark:bg-card sm:p-8" aria-label="Ejercicio de encontrar una palabra incorrecta">
-              <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xs font-extrabold uppercase tracking-wider text-primary">Pregunta {position + 1} de {roundRefs.length}</p><p className="text-xs font-semibold text-muted-foreground">Elige solo una palabra incorrecta</p></div>
+            <section className="rounded-[2rem] border border-primary/10 bg-white p-5 shadow-sm dark:bg-card sm:p-8" aria-label="Ejercicio de Grammar C1">
+              <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xs font-extrabold uppercase tracking-wider text-primary">Pregunta {position + 1} de {roundRefs.length}</p><p className="text-xs font-semibold text-muted-foreground">{question.kind === "error-word" ? "Tipo 2 · Detecta el error" : "Tipo 1 · Completa la oración"}</p></div>
               <div className="mt-4 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-[#a88ae5] transition-all" style={{ width: `${((position + 1) / roundRefs.length) * 100}%` }} /></div>
-              <p className="mt-6 text-sm font-semibold text-muted-foreground">Lee la oración. Las cuatro opciones están subrayadas:</p>
-              <div className="mt-4 rounded-3xl bg-[#fff9e7] p-5 text-xl font-medium leading-[2.7] dark:bg-[#4b402b] sm:text-2xl" lang="en">
-                {sentenceParts(question.sentence).map((part, index) => part.mark ? (
-                  <button key={index} type="button" onClick={() => answer(part.mark!)} disabled={selected !== null} aria-label={`Opción ${part.mark}: ${part.text}`} className={cn(
-                    "mx-0.5 inline-flex items-baseline gap-1 rounded-lg border-b-[3px] px-1.5 py-0.5 font-bold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
-                    selected === null && "border-[#ad7ac4] bg-white hover:bg-[#f1e3ff] dark:bg-white/10",
-                    selected !== null && part.mark === question.wrong && "border-green-600 bg-green-100 text-green-900 dark:bg-green-900/50 dark:text-green-100",
-                    selected === part.mark && part.mark !== question.wrong && "border-red-600 bg-red-100 text-red-900 dark:bg-red-900/50 dark:text-red-100",
-                    selected !== null && selected !== part.mark && part.mark !== question.wrong && "border-transparent bg-white/40 opacity-65 dark:bg-white/5"
-                  )}><span className="text-xs font-black not-italic">{part.mark}</span>{part.text}</button>
-                ) : <span key={index}>{part.text}</span>)}
+              <p className="mt-6 text-sm font-semibold text-muted-foreground">{question.kind === "error-word" ? "¿Cuál de las cuatro palabras subrayadas está mal?" : "¿Qué opción completa correctamente la oración?"}</p>
+              <div className="mt-4 rounded-3xl bg-[#fff9e7] p-5 text-xl font-medium leading-[2] dark:bg-[#4b402b] sm:text-2xl" lang="en">
+                {question.kind === "error-word" ? sentenceParts(question.sentence).map((part, index) => part.mark ? (
+                  <span key={index} className={cn("mx-0.5 rounded-md border-b-[3px] border-[#ad7ac4] px-0.5 font-bold", selected !== null && part.mark === answerKey && "border-green-600 bg-green-100 text-green-900 dark:bg-green-900/50 dark:text-green-100", selected === part.mark && part.mark !== answerKey && "border-red-600 bg-red-100 text-red-900 dark:bg-red-900/50 dark:text-red-100")}><span className="mr-1 align-top text-[10px] font-black text-[#7353ad] dark:text-[#e5d4ff]">{part.mark}</span>{part.text}</span>
+                ) : <span key={index}>{part.text}</span>) : <>{question.sentence.split("_____")[0]}<span className="mx-1 inline-block min-w-20 border-b-[3px] border-[#ad7ac4] text-center font-bold text-[#7353ad] dark:text-[#e5d4ff]">{selected ? question.choices[labels.indexOf(answerKey!)] : "?"}</span>{question.sentence.split("_____")[1]}</>}
               </div>
-              <div className="mt-5 flex flex-wrap gap-2" aria-label="Opciones de respuesta">{labels.map((mark) => <Button key={mark} type="button" variant={selected === mark ? "default" : "outline"} disabled={selected !== null} onClick={() => answer(mark)} aria-label={`Seleccionar palabra ${mark}`}>Palabra {mark}</Button>)}</div>
+              <div className="mt-5 grid gap-2 sm:grid-cols-2" aria-label="Opciones de respuesta">{labels.map((mark, index) => {
+                const option = question.kind === "error-word" ? wordOptions[index]?.text : question.choices[index];
+                return <Button key={mark} type="button" variant={selected === mark ? "default" : "outline"} disabled={selected !== null} onClick={() => answer(mark)} aria-label={`Opción ${mark}: ${option}`} className={cn("h-auto min-h-12 justify-start whitespace-normal px-4 py-3 text-left", selected !== null && mark === answerKey && "border-green-600 bg-green-100 text-green-900 opacity-100 dark:bg-green-900/50 dark:text-green-100") }><span className="mr-3 grid h-6 w-6 shrink-0 place-items-center rounded-md bg-primary/10 text-xs font-black">{mark}</span><span lang="en">{option}</span></Button>;
+              })}</div>
               {selected && (
-                <div role="status" className={cn("mt-6 rounded-2xl border p-4", selected === question.wrong ? "border-green-300 bg-green-50 dark:bg-green-950/40" : "border-amber-300 bg-amber-50 dark:bg-amber-950/40")}>
-                  <p className="font-extrabold">{selected === question.wrong ? "¡Exacto! Encontraste la palabra 🥳" : `Casi. La palabra incorrecta era ${question.wrong}. 💡`}</p>
+                <div role="status" className={cn("mt-6 rounded-2xl border p-4", selected === answerKey ? "border-green-300 bg-green-50 dark:bg-green-950/40" : "border-amber-300 bg-amber-50 dark:bg-amber-950/40")}>
+                  <p className="font-extrabold">{selected === answerKey ? "¡Exacto! 🥳" : question.kind === "error-word" ? `Casi. La palabra incorrecta es ${answerKey}: «${wordOptions[labels.indexOf(answerKey!)]?.text}». 💡` : `Casi. La opción correcta es ${answerKey}: «${question.choices[labels.indexOf(answerKey!)]}». 💡`}</p>
                   <p className="mt-2 text-sm leading-relaxed">{question.explanation}</p>
-                  <p className="mt-2 rounded-xl bg-white/70 p-3 text-sm dark:bg-white/10"><span className="font-bold">Así queda:</span> <span lang="en">{correctedSentence(question)}</span></p>
+                  <p className="mt-2 rounded-xl bg-white/70 p-3 text-sm dark:bg-white/10"><span className="font-bold">Oración correcta:</span> <span lang="en">{question.kind === "error-word" ? correctedSentence(question) : completedSentence(question)}</span></p>
                   <Button className="mt-4" onClick={next}>{position === roundRefs.length - 1 ? "Ver mi resultado" : "Siguiente pregunta"}<ArrowRight className="h-4 w-4" /></Button>
                 </div>
               )}
@@ -196,7 +198,7 @@ export default function GrammarC1Page() {
               </article>;
             })}</div>
           </section>
-          <div className="flex flex-wrap items-end justify-between gap-2"><div><h2 className="text-2xl font-black">Tu mapa de temas C1</h2><p className="mt-1 text-sm text-muted-foreground">Cada tarjeta tiene una mini lección y ejercicios de una sola palabra.</p></div><span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">{grammarC1Topics.length} temas · {totalQuestions} preguntas</span></div>
+          <div className="flex flex-wrap items-end justify-between gap-2"><div><h2 className="text-2xl font-black">Tu mapa de temas C1</h2><p className="mt-1 text-sm text-muted-foreground">Cada tarjeta tiene una mini lección y práctica mixta: completar y detectar errores.</p></div><span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">{grammarC1Topics.length} temas · {totalQuestions} preguntas</span></div>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">{grammarC1Topics.map((item, index) => {
             const completed = topicProgress[item.id]?.completedIds.length ?? 0;
             return <article key={item.id} className="flex flex-col rounded-3xl border border-primary/10 bg-white p-5 shadow-sm dark:bg-card"><div className="flex items-start justify-between gap-2"><div className="grid h-10 w-10 place-items-center rounded-2xl bg-[#f3eafd] text-lg font-black text-[#7b57ae] dark:bg-[#46345f]">{index === 0 ? <Target className="h-5 w-5" /> : index + 1}</div><span className="rounded-full bg-muted px-2.5 py-1 text-xs font-bold">{hydrated ? completed : "…"}/{item.questions.length}</span></div><h3 className="mt-4 text-lg font-extrabold">{item.title}</h3><p className="mt-1 flex-1 text-sm leading-relaxed text-muted-foreground">{item.focus}</p><div className="mt-4 h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-[#b38ad1]" style={{ width: `${(completed / item.questions.length) * 100}%` }} /></div><Button className="mt-4 w-full" variant={index === 0 ? "default" : "outline"} onClick={() => startTopic(item.id)}>{completed > 0 ? "Continuar" : "Explorar tema"}<ArrowRight className="h-4 w-4" /></Button></article>;
@@ -204,7 +206,7 @@ export default function GrammarC1Page() {
         </>
       )}
 
-      <aside className="rounded-2xl border border-primary/10 bg-muted/35 p-4 text-xs leading-relaxed text-muted-foreground"><p className="flex items-center gap-2 font-bold"><CircleHelp className="h-4 w-4" /> Cómo se relaciona con el examen</p><p className="mt-1">La sección Grammar de iTEP Academic incluye completar espacios e identificar errores. El material aquí es original, inspirado en ese formato; para que entrenes el punto que te cuesta, cada ejercicio de esta sección marca exactamente cuatro palabras individuales y una sola es incorrecta. Acertar este banco es práctica, no certificación C1. <a className="underline" href="https://www.itepexam.com/wp-content/uploads/2022/05/iTEP-Academic-Brochure.pdf" target="_blank" rel="noopener noreferrer">Ver folleto oficial de iTEP</a>.</p></aside>
+      <aside className="rounded-2xl border border-primary/10 bg-muted/35 p-4 text-xs leading-relaxed text-muted-foreground"><p className="flex items-center gap-2 font-bold"><CircleHelp className="h-4 w-4" /> Cómo se relaciona con el examen</p><p className="mt-1">La sección Grammar de iTEP Academic incluye 13 preguntas para completar oraciones y 12 para identificar errores. Aquí entrenas ambos formatos con material original y explicaciones; no es una certificación C1. <a className="underline" href="https://www.itepexam.com/wp-content/uploads/2023/07/web_Academic-brochure.pdf" target="_blank" rel="noopener noreferrer">Ver folleto oficial de iTEP</a>.</p></aside>
     </main>
   );
 }
