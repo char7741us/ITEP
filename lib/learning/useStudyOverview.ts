@@ -43,6 +43,8 @@ export function useStudyOverview() {
   const feedback = (
     useErrorNotebookStore((state) => state.productiveFeedback) ?? []
   ).filter((item) => item.profileUsername === username);
+  const legacyMastered = useErrorNotebookStore((state) => state.masteredByProfile[profileKey]) ?? 0;
+  const masteredTotal = Math.max(legacyMastered, learning.activities.filter((activity) => activity.kind === "mastery").length);
   const attempts = allAttempts.filter(
     (attempt) =>
       (attempt.profileUsername ?? null) === username &&
@@ -127,5 +129,6 @@ export function useStudyOverview() {
     dailyCompleted,
     grammarCompleted,
     coachSummary,
+    masteredTotal,
   };
 }

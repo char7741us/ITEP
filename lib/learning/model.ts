@@ -143,7 +143,7 @@ export function learningStats(profile: LearningProfile, now: Date) {
   };
 }
 
-export function learningBadges(profile: LearningProfile, now: Date) {
+export function learningBadges(profile: LearningProfile, now: Date, masteredTotal = 0) {
   const stats = learningStats(profile, now);
   const count = (kind: ActivityKind) =>
     profile.activities.filter((activity) => activity.kind === kind).length;
@@ -195,7 +195,7 @@ export function learningBadges(profile: LearningProfile, now: Date) {
       emoji: "🌸",
       title: "Aprender del error",
       detail: "Supera 3 temas del Cuaderno",
-      earned: count("mastery") >= 3,
+      earned: Math.max(count("mastery"), masteredTotal) >= 3,
     },
     {
       id: "daily",

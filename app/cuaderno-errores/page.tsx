@@ -398,8 +398,8 @@ export default function ErrorNotebookPage() {
                         <p className="font-extrabold">{selectedIndex === currentQuestion.correctIndex ? "¡Sí! Encontraste la pista 🌟" : "Casi: aquí hay una pista nueva 🌱"}</p>
                         <p className="mt-2 text-sm">La respuesta es <strong lang="en">{currentQuestion.options[currentQuestion.correctIndex]}</strong>.</p>
                         <p className="mt-2 text-sm leading-relaxed">{currentQuestion.explanation}</p>
-                        <CoachHelpButton skill={activeEntry.section} question={currentQuestion.question} explanation={currentQuestion.explanation} />
-                        {questionIndex === 1 && <div className="mt-4"><PracticeMoment skill={activeEntry.section} question={currentQuestion.question} explanation={currentQuestion.explanation} /></div>}
+                        <CoachHelpButton skill={activeEntry.section} question={[currentQuestion.context, currentQuestion.question].filter(Boolean).join("\n\n")} explanation={currentQuestion.explanation} />
+                        {questionIndex === 1 && <div className="mt-4"><PracticeMoment skill={activeEntry.section} question={[currentQuestion.context, currentQuestion.question].filter(Boolean).join("\n\n")} explanation={currentQuestion.explanation} /></div>}
                         {selectedIndex !== currentQuestion.correctIndex && <p className="mt-2 text-xs font-medium">Tu racha de aciertos vuelve a 0, pero puedes seguir practicando este tema.</p>}
                         <Button className="mt-4" onClick={nextQuestion}>{questionIndex === (questions?.length ?? 0) - 1 ? "Ver resultado" : "Siguiente pregunta"} <ArrowRight className="h-4 w-4" /></Button>
                       </div>

@@ -28,6 +28,11 @@ const activity = (
 });
 
 describe("constancia y motivación basadas en práctica real", () => {
+  it("recognizes old mastery totals without inventing activity dates or XP", () => {
+    const profile = emptyLearningProfile();
+    expect(learningBadges(profile, new Date(), 5).find((badge) => badge.id === "mastery")?.earned).toBe(true);
+    expect(learningStats(profile, new Date())).toMatchObject({ streak: 0, xp: 0 });
+  });
   beforeEach(() => {
     localStorage.clear();
     useLearningStore.setState({ profiles: {}, celebration: null });

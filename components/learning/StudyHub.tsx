@@ -33,10 +33,11 @@ export function StudyHub() {
     coachSummary,
     dailyCompleted,
     grammarCompleted,
+    masteredTotal,
     entries,
   } = useStudyOverview();
   const next = suggestedStep(coachSummary);
-  const badges = learningBadges(learning, now);
+  const badges = learningBadges(learning, now, masteredTotal);
   const earned = badges.filter((badge) => badge.earned).length;
   return (
     <div className="mx-auto w-full max-w-6xl space-y-7 px-4 pt-8 pb-16 sm:space-y-9 sm:pt-10">
@@ -161,7 +162,7 @@ export function StudyHub() {
           },
           {
             icon: Flower2,
-            value: `${learning.activities.filter((activity) => activity.kind === "mastery").length}`,
+            value: `${masteredTotal}`,
             label: "Temas superados",
             note: "Errores que se vuelven pistas",
           },
