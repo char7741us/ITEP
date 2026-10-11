@@ -1,4 +1,4 @@
-import { ApiError } from "@google/genai";
+import { ApiError, ThinkingLevel } from "@google/genai";
 import { getGeminiClient, GRADING_MODELS } from "./provider";
 import type { RubricResult } from "@/lib/types/attempt";
 import { buildWritingGradingPrompt, writingResponseSchema } from "./rubrics/writingRubric";
@@ -18,6 +18,9 @@ async function callGemini(contents: unknown, responseSchema: object): Promise<Ru
         config: {
           responseMimeType: "application/json",
           responseSchema,
+          // Rubric scoring is a bounded task. LOW avoids the long default
+          // reasoning delay of 3.8 Flash while preserving structured output.
+          ...(model === "gemini-3.8-flash" ? { thinkingConfig: { thinkingLevel: ThinkingLevel.LOW } } : {}),
         },
       });
       break;
