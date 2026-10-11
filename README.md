@@ -10,7 +10,7 @@ Simulacro de práctica completo para el examen **iTEP Academic-Plus**, construid
 - **Rubric detallado** con 4 dimensiones de evaluación (Fluidez, Gramática, Vocabulario, Coherencia)
 - **Niveles CEFR** automáticos (Below B2, B2, C1, C2)
 - **Dashboard de progreso** con gráficos de tendencia por habilidad
-- **Cuaderno de Errores** local: agrupa temas fallados y genera tres ejercicios nuevos por tema con Gemini; tres aciertos consecutivos lo marcan como dominado
+- **Cuaderno de Errores** local: agrupa temas fallados, ofrece mini lecciones ilustradas y retos de tres preguntas; registra días de estudio y logros por perfil. Tres aciertos consecutivos dominan un tema
 - **6 simulacros completos nuevos** con lecturas, preguntas y audios distintos; los 2 bancos anteriores y sus 30 combinaciones permanecen disponibles para abrir resultados históricos, pero no se asignan a simulacros nuevos
 - **60 sesiones cortas de práctica** con Grammar, Reading, Listening, Writing y Speaking: 60 textos, 60 diálogos con audio de dos voces, 540 preguntas objetivas y 120 consignas de producción; avance local por perfil
 - **Modo Práctica** y **Modo Entrenamiento Intensivo**
@@ -21,7 +21,7 @@ Simulacro de práctica completo para el examen **iTEP Academic-Plus**, construid
 
 - Node.js 18+ 
 - npm, yarn o pnpm
-- API key de Google Gemini solo para la evaluación opcional de Writing/Speaking y los ejercicios del Cuaderno de Errores; las 60 sesiones y sus audios funcionan sin ella
+- API key de Google Gemini solo para la evaluación opcional de Writing/Speaking y la generación de preguntas nuevas del Cuaderno; las mini lecciones y los retos cubiertos por el banco de las 60 sesiones funcionan sin ella
 
 ## Instalación
 
