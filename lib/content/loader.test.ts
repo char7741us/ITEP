@@ -5,9 +5,9 @@ import { listContentPacks, loadContentPack, pickContentPackKeyForMode } from "./
 import { validateContentPack } from "./schema";
 
 describe("bancos iTEP Academic-Plus", () => {
-  it("valida 32 bancos históricos y 6 simulacros nuevos con la estructura y los tiempos oficiales", () => {
+  it("valida los bancos históricos y las dos ediciones de seis simulacros", () => {
     const packs = listContentPacks();
-    expect(packs).toHaveLength(38);
+    expect(packs).toHaveLength(44);
     for (const { key } of packs) {
       const pack = loadContentPack(key);
       expect(`${pack.manifest.packId}@${pack.manifest.version}`).toBe(key);
@@ -26,6 +26,7 @@ describe("bancos iTEP Academic-Plus", () => {
       }
       expect(new Set(firstCycle).size).toBe(6);
       expect(firstCycle.every((key) => key.includes("-new-"))).toBe(true);
+      expect(firstCycle.every((key) => key.endsWith("@2.0.0"))).toBe(true);
       for (let index = 0; index < 100; index++) {
         const next = pickContentPackKeyForMode(mode, previous);
         expect(next).not.toBe(previous);
@@ -36,7 +37,7 @@ describe("bancos iTEP Academic-Plus", () => {
   });
 
   it("cada simulacro nuevo tiene textos y guiones distintos", () => {
-    const packs = listContentPacks().filter(({ key }) => key.includes("-new-")).map(({ key }) => loadContentPack(key));
+    const packs = listContentPacks().filter(({ key }) => key.includes("-new-") && key.endsWith("@1.0.0")).map(({ key }) => loadContentPack(key));
     expect(new Set(packs.map((pack) => pack.reading.parts[0].passageText)).size).toBe(6);
     expect(new Set(packs.map((pack) => pack.reading.parts[1].passageText)).size).toBe(6);
     expect(new Set(packs.map((pack) => pack.listening.parts[2].segments[0].audioScript.map((line) => line.text).join(" "))).size).toBe(6);
@@ -50,6 +51,23 @@ describe("bancos iTEP Academic-Plus", () => {
     }
     const firstError = packs[0].grammar.parts[1].items[0];
     expect(firstError.choices[firstError.correctIndex]).toBe("have completed");
+  });
+
+  it("la edición C1 mantiene audios válidos y presenta errores de una palabra distintos por simulacro", () => {
+    const packs = listContentPacks().filter(({ key }) => key.endsWith("@2.0.0")).map(({ key }) => loadContentPack(key));
+    expect(packs).toHaveLength(6);
+    const errors = packs.flatMap((pack) => pack.grammar.parts[1].items);
+    expect(errors).toHaveLength(72);
+    expect(new Set(errors.map((item) => item.prompt)).size).toBe(72);
+    expect(new Set(packs.flatMap((pack) => pack.grammar.parts[0].items.map((item) => item.prompt))).size).toBe(78);
+    expect(errors.every((item) => item.choices.every((choice) => choice.trim().split(/\s+/).length === 1))).toBe(true);
+    expect(errors.every((item) => ["[A]", "[B]", "[C]", "[D]"].every((mark) => item.prompt.includes(mark)))).toBe(true);
+    for (const pack of packs) {
+      expect(pack.grammar.parts[0].items).toHaveLength(13);
+      expect(pack.reading.parts[0].items[0].prompt).toContain("interpretation");
+      expect(pack.listening.parts[2].segments[0].audioAssetPath).toMatch(/\.m4a$/);
+      expect(pack.writing.tasks[1].prompt).toContain("counterargument");
+    }
   });
 
   it("rechaza un banco con duración incorrecta", () => {

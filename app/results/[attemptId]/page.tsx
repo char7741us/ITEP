@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { getAttempt, saveAttempt } from "@/lib/storage/attemptsRepo";
 import { loadContentPack } from "@/lib/content/loader";
 import { retryMissingGrades } from "@/lib/exam/grading";
+import { getC1PracticeReadiness } from "@/lib/exam/readiness";
 import { getReadingItems, getGrammarItems } from "@/lib/exam/machine";
 import { getListeningItems } from "@/lib/exam/listening";
 import type { AttemptRecord } from "@/lib/types/attempt";
@@ -65,6 +66,7 @@ export default function ResultsPage() {
   }
 
   const contentPackKey = `${attempt.contentPackId}@${attempt.contentPackVersion}`;
+  const readiness = getC1PracticeReadiness(attempt, contentPack);
   const gradingErrors = attempt.gradingErrors ?? [];
   const ungradedSections = gradingErrors.some((error) => error.startsWith("Writing y Speaking:"))
     ? ["writing", "speaking"]
@@ -114,6 +116,15 @@ export default function ResultsPage() {
       )}
       {retryError && <Alert variant="destructive"><AlertTitle>No se pudo guardar la nueva calificación</AlertTitle><AlertDescription>{retryError}</AlertDescription></Alert>}
       <ScoreSummaryCard scores={attempt.scores} isPartial={gradingErrors.length > 0} />
+      <section className="rounded-2xl border border-primary/20 bg-primary/5 p-5" aria-label="Meta de práctica C1">
+        <p className="text-xs font-bold uppercase tracking-wider text-primary">Tu siguiente misión</p>
+        <h2 className="mt-1 text-xl font-bold">{readiness.ready ? "🌟 Alcanzaste la meta exigente de práctica C1" : "🎯 Camino a la meta de práctica C1"}</h2>
+        <p className="mt-2 text-sm text-muted-foreground">Esta meta de estudio exige al menos 85 % en cada sección objetiva y 4.5/6 en cada tarea de Writing y Speaking. Es una referencia interna del simulador, no una certificación ni la conversión oficial de iTEP.</p>
+        <ul className="mt-4 grid gap-2 sm:grid-cols-2">
+          {readiness.checks.map((check) => <li key={check.section} className="rounded-xl bg-background p-3 text-sm"><span className="font-semibold">{check.met ? "✅" : "🌱"} {check.section}</span><span className="block text-xs text-muted-foreground">{check.detail}</span></li>)}
+        </ul>
+        {!readiness.ready && <p className="mt-4 text-sm">Siguiente paso: <Link className="font-semibold text-primary underline" href="/cuaderno-errores">entrena tus errores generales</Link> o sigue tu <Link className="font-semibold text-primary underline" href="/cuaderno-errores/grammar">plan de Grammar C1</Link>.</p>}
+      </section>
       <SectionBreakdownTable scores={attempt.scores} ungradedSections={ungradedSections} />
 
       <Separator />

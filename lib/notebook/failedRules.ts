@@ -19,13 +19,13 @@ export function comprehensionRule(section: "Reading" | "Listening", question: st
   if (/main purpose|mainly|main point|main idea|primarily about/.test(text)) {
     return `${prefix}: identificar la idea principal o el propósito del texto.`;
   }
-  if (/differ|difference|distinguish|contrast|comparison/.test(text)) {
+  if (/differ|difference|distinguish|contrast|comparison|shared|both cases|two passages/.test(text)) {
     return `${prefix}: comparar ideas y reconocer diferencias entre ellas.`;
   }
   if (/why|reason|because|effect|cause/.test(text)) {
     return `${prefix}: reconocer causas, motivos y consecuencias.`;
   }
-  if (/suggest|imply|infer|based on|criticism|concern|react|at the end/.test(text)) {
+  if (/suggest|imply|infer|interpretation|conclusion|limitation|follow-up|recommendation|strengthen|premature|based on|criticism|concern|react|at the end/.test(text)) {
     return `${prefix}: inferir una conclusión o la postura de quien habla o escribe.`;
   }
   return `${prefix}: localizar e interpretar un detalle explícito.`;

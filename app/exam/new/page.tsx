@@ -16,12 +16,12 @@ const MODE_OPTIONS: { value: ExamMode; description: string }[] = [
   {
     value: "practice",
     description:
-      "Practica con uno de seis simulacros nuevos completos, con textos, audios y preguntas diferentes.",
+      "Seis retos completos C1 con preguntas más analíticas, Grammar de dos formatos y revisión detallada.",
   },
   {
     value: "intensive",
     description:
-      "Sin pausas ni repetición de audio; avanza al siguiente banco completo de contenido.",
+      "Mismos retos C1 con tiempo estricto, sin pausas ni repetición de audio.",
   },
 ];
 
@@ -100,6 +100,12 @@ export default function NewExamPage() {
           disponibilidad del servicio.
         </AlertDescription>
       </Alert>
+
+      <div className="rounded-2xl border border-primary/20 bg-primary/5 p-5">
+        <p className="font-bold">🎯 Tu misión en este simulacro</p>
+        <p className="mt-1 text-sm text-muted-foreground">Lee y escucha buscando implicaciones, no solo datos; en Grammar identifica una sola palabra incorrecta; en Writing y Speaking sustenta tus ideas y reconoce sus límites.</p>
+        <p className="mt-2 text-xs text-muted-foreground">Al terminar verás una meta exigente por cada una de las cinco áreas y tus errores pasarán al Cuaderno para entrenarlos.</p>
+      </div>
 
       {startError && <p role="alert" className="text-sm text-destructive">{startError}</p>}
 

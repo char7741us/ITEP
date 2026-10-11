@@ -66,6 +66,9 @@ export default function ErrorNotebookPage() {
   const entries = useErrorNotebookStore((state) => state.entries);
   const studyDaysByProfile = useErrorNotebookStore((state) => state.studyDaysByProfile);
   const masteredByProfile = useErrorNotebookStore((state) => state.masteredByProfile);
+  const masteredTopics = useErrorNotebookStore((state) => state.masteredTopics);
+  const productiveFeedback = useErrorNotebookStore((state) => state.productiveFeedback);
+  const [view, setView] = useState<"general" | "mastered">("general");
   const [hydrated, setHydrated] = useState(false);
   const [speechSupported] = useState(() => typeof window !== "undefined" && "speechSynthesis" in window);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -94,6 +97,11 @@ export default function ErrorNotebookPage() {
           try {
             const pack = loadContentPack(`${attempt.contentPackId}@${attempt.contentPackVersion}`);
             await recordCompletedAttempt(attempt.id, attempt.profileUsername ?? null, collectFailedTopics(attempt, pack));
+            for (const [section, responses] of [["Writing", attempt.responses.writing], ["Speaking", attempt.responses.speaking]] as const) {
+              for (const response of responses) {
+                if (response.grading) useErrorNotebookStore.getState().recordProductiveFeedback(attempt.id, attempt.profileUsername ?? null, section, response.taskNumber, response.grading);
+              }
+            }
           } catch (cause) {
             console.error("No se pudo importar un simulacro al cuaderno:", cause);
           }
@@ -121,6 +129,8 @@ export default function ErrorNotebookPage() {
   const studiedToday = days.includes(localStudyDate(new Date()));
   const dayStreak = hydrated ? consecutiveStudyDays(days, new Date()) : 0;
   const masteredCount = masteredByProfile[profileKey] ?? 0;
+  const visibleMastered = (masteredTopics ?? []).filter((topic) => topic.profileUsername === username);
+  const visibleProductive = (productiveFeedback ?? []).filter((item) => item.profileUsername === username);
 
   function openTopic(entry: ErrorNotebookEntry) {
     requestRef.current?.abort();
@@ -237,8 +247,8 @@ export default function ErrorNotebookPage() {
         </div>
         <div className="rounded-3xl border border-primary/10 bg-white/80 p-4 shadow-sm dark:bg-card">
           <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground"><BookOpen className="h-4 w-4 text-[#bf5374]" /> Por descubrir</div>
-          <p className="mt-2 text-3xl font-extrabold">{hydrated ? visibleEntries.length : "…"} <span className="text-sm font-medium">temas</span></p>
-          <p className="mt-1 text-xs text-muted-foreground">Cada tema trae una mini lección.</p>
+          <p className="mt-2 text-3xl font-extrabold">{hydrated ? visibleEntries.length + visibleProductive.length : "…"} <span className="text-sm font-medium">pendientes</span></p>
+          <p className="mt-1 text-xs text-muted-foreground">Preguntas y observaciones para entrenar.</p>
         </div>
         <div className="rounded-3xl border border-primary/10 bg-white/80 p-4 shadow-sm dark:bg-card">
           <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground"><Sparkles className="h-4 w-4 text-[#bf9525]" /> Ya florecieron</div>
@@ -251,6 +261,11 @@ export default function ErrorNotebookPage() {
         <div className="flex items-center gap-4"><span className="text-5xl" aria-hidden="true">🕵️‍♀️</span><div><p className="text-xs font-extrabold uppercase tracking-widest text-[#8052aa] dark:text-[#d4b7ff]">Sección especial</p><h2 className="mt-1 text-2xl font-black">Solo Grammar · camino a C1</h2><p className="mt-1 text-sm text-foreground/75">Todo tu mapa de temas, con prioridad en subject–verb agreement y ejercicios de encontrar una sola palabra incorrecta.</p></div></div>
         <span className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground group-hover:bg-primary/90">Entrar a Grammar <ArrowRight className="h-4 w-4" /></span>
       </Link>
+
+      {!activeId && <nav className="flex flex-wrap gap-2" aria-label="Secciones del cuaderno">
+        <Button variant={view === "general" ? "default" : "outline"} onClick={() => setView("general")}>📝 Errores generales ({visibleEntries.length + visibleProductive.length})</Button>
+        <Button variant={view === "mastered" ? "default" : "outline"} onClick={() => setView("mastered")}>✅ Temas superados ({visibleMastered.length})</Button>
+      </nav>}
 
       {activeId ? (
         <div className="space-y-5">
@@ -387,7 +402,19 @@ export default function ErrorNotebookPage() {
         <p role="status" className="rounded-3xl bg-white/70 p-6 text-sm text-muted-foreground dark:bg-card">Preparando tu cuaderno…</p>
       ) : error ? (
         <p role="alert" className="rounded-3xl bg-white/70 p-6 text-sm text-destructive dark:bg-card">{error}</p>
-      ) : visibleEntries.length === 0 ? (
+      ) : view === "mastered" ? (
+        <section className="rounded-[2rem] border border-emerald-200 bg-emerald-50/80 p-5 dark:border-emerald-800 dark:bg-emerald-950/30 sm:p-7" aria-label="Lista de temas superados">
+          <h2 className="text-2xl font-extrabold">Tu checklist de temas superados 🌿</h2>
+          <p className="mt-2 text-sm text-muted-foreground">Cada marca representa tres respuestas correctas seguidas. Si vuelves a fallar esa regla en un nuevo simulacro, regresará a Errores generales para repasarla.</p>
+          {visibleMastered.length > 0 ? <ul className="mt-5 space-y-3">
+            {[...visibleMastered].reverse().map((topic) => <li key={topic.id} className="flex items-start gap-3 rounded-2xl bg-white p-4 dark:bg-card">
+              <Check className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700 dark:text-emerald-300" aria-hidden="true" />
+              <div><p className="font-bold">{sectionStyle[topic.section].emoji} {topic.section} · {getCoachGuide(topic.section, topic.failed_rule).title}</p><p className="mt-1 text-sm text-muted-foreground">{topic.failed_rule}</p><p className="mt-1 text-xs text-muted-foreground">Superado: {new Date(topic.masteredAt).toLocaleDateString("es-CO")}</p></div>
+            </li>)}
+          </ul> : <p className="mt-5 rounded-2xl bg-white p-4 text-sm dark:bg-card">Aquí aparecerán los temas que superes desde esta actualización. Tu contador anterior se conserva: {masteredCount} logros acumulados. 🌸</p>}
+          {masteredCount > visibleMastered.length && visibleMastered.length > 0 && <p className="mt-4 text-xs text-muted-foreground">Además, conservas {masteredCount - visibleMastered.length} logros anteriores sin detalle de tema.</p>}
+        </section>
+      ) : visibleEntries.length === 0 && visibleProductive.length === 0 ? (
         <div className="flex flex-col items-center rounded-[2rem] border border-primary/10 bg-white/85 p-7 text-center shadow-sm dark:bg-card sm:p-10">
           <NotebookBuddy small />
           <h2 className="mt-2 text-2xl font-extrabold">Tu jardín está al día 🌷</h2>
@@ -397,7 +424,7 @@ export default function ErrorNotebookPage() {
       ) : (
         <section>
           <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
-            <div><p className="text-xs font-bold uppercase tracking-[.12em] text-muted-foreground">Elige tu aventura</p><h2 className="mt-1 text-2xl font-extrabold">Tus temas para florecer</h2></div>
+            <div><p className="text-xs font-bold uppercase tracking-[.12em] text-muted-foreground">Elige tu aventura</p><h2 className="mt-1 text-2xl font-extrabold">Errores generales · temas por entrenar</h2></div>
             <p className="text-sm text-muted-foreground">Empieza por cualquiera; 5 minutos cuentan 💛</p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -416,6 +443,17 @@ export default function ErrorNotebookPage() {
               );
             })}
           </div>
+          {visibleEntries.length === 0 && <p className="rounded-2xl bg-white/80 p-4 text-sm text-muted-foreground dark:bg-card">No tienes preguntas pendientes de Grammar, Reading o Listening. 🌷</p>}
+          {visibleProductive.length > 0 && <div className="mt-8 space-y-4">
+            <div><p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Tus otras habilidades también cuentan</p><h3 className="mt-1 text-xl font-extrabold">Writing y Speaking · observaciones para trabajar</h3><p className="mt-1 text-sm text-muted-foreground">Se guardan cuando la evaluación orientativa queda por debajo de 4.5/6. Una nueva evaluación de esa misma tarea que alcance la meta retira la observación.</p></div>
+            <div className="grid gap-4 sm:grid-cols-2">{[...visibleProductive].reverse().map((feedback) => <article key={feedback.id} className="rounded-[1.75rem] border border-primary/10 bg-white p-5 shadow-sm dark:bg-card">
+              <p className="text-xs font-extrabold uppercase tracking-wider text-primary">{feedback.section === "Writing" ? "✍️" : "🎤"} {feedback.section} · tarea {feedback.taskNumber}</p>
+              <p className="mt-2 text-lg font-extrabold">{feedback.score.toFixed(1)}/6 · próximo paso</p>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{feedback.rationale}</p>
+              <ul className="mt-3 space-y-1 text-sm">{feedback.improvements.slice(0, 3).map((improvement, index) => <li key={`${feedback.id}-${index}`} className="flex gap-2"><span aria-hidden="true">🌱</span><span>{improvement}</span></li>)}</ul>
+              <Link href="/practica-diaria" className="mt-4 inline-flex items-center gap-1 text-sm font-bold text-primary underline">Practicar de nuevo <ArrowRight className="h-4 w-4" /></Link>
+            </article>)}</div>
+          </div>}
         </section>
       )}
 

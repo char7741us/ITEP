@@ -23,14 +23,14 @@ describe("Grammar C1 progress", () => {
     expect(localStorage.getItem("itep-simulator:grammar-c1-progress")).toContain("subject-verb-agreement:0");
   });
 
-  it("approves a day at 80 percent and remembers the best attempt", () => {
+  it("approves a day at 85 percent and remembers the best attempt", () => {
     const store = useGrammarProgressStore.getState();
-    store.recordDayResult("guest", 1, 3, 5);
+    store.recordDayResult("guest", 1, 5, 7);
     expect(useGrammarProgressStore.getState().daysByProfile.guest[1].completedAt).toBeUndefined();
-    store.recordDayResult("guest", 1, 4, 5);
+    store.recordDayResult("guest", 1, 6, 7);
     const result = useGrammarProgressStore.getState().daysByProfile.guest[1];
     expect(result.attempts).toBe(2);
-    expect(result.bestCorrect).toBe(4);
+    expect(result.bestCorrect).toBe(6);
     expect(result.completedAt).toBeTruthy();
     expect(localStorage.getItem("itep-simulator:grammar-c1-progress")).toContain('"completedAt"');
   });

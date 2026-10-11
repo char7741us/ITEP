@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import type { FailedTopic, NotebookSection } from "./failedRules";
+import type { RubricResult } from "@/lib/types/attempt";
 
 export interface ErrorNotebookEntry {
   id: string;
@@ -10,6 +11,25 @@ export interface ErrorNotebookEntry {
   failed_rule: string;
   streak: number;
   profileUsername: string | null;
+}
+
+export interface MasteredTopic {
+  id: string;
+  section: NotebookSection;
+  failed_rule: string;
+  profileUsername: string | null;
+  masteredAt: string;
+}
+
+export interface ProductiveFeedback {
+  id: string;
+  section: "Writing" | "Speaking";
+  taskNumber: 1 | 2;
+  score: number;
+  rationale: string;
+  improvements: string[];
+  profileUsername: string | null;
+  recordedAt: string;
 }
 
 export function notebookProfileKey(username: string | null): string {
@@ -39,7 +59,10 @@ interface ErrorNotebookState {
   processedAttemptIds: string[];
   studyDaysByProfile: Record<string, string[]>;
   masteredByProfile: Record<string, number>;
+  masteredTopics: MasteredTopic[];
+  productiveFeedback: ProductiveFeedback[];
   recordAttempt: (attemptId: string, profileUsername: string | null, topics: FailedTopic[]) => void;
+  recordProductiveFeedback: (attemptId: string, profileUsername: string | null, section: "Writing" | "Speaking", taskNumber: 1 | 2, grading: RubricResult) => void;
   markStudyDay: (profileUsername: string | null, date: Date) => void;
   answer: (id: string, correct: boolean) => boolean;
 }
@@ -51,6 +74,23 @@ export const useErrorNotebookStore = create<ErrorNotebookState>()(
       processedAttemptIds: [],
       studyDaysByProfile: {},
       masteredByProfile: {},
+      masteredTopics: [],
+      productiveFeedback: [],
+      recordProductiveFeedback: (attemptId, profileUsername, section, taskNumber, grading) => {
+        const id = `${attemptId}:${section}:${taskNumber}`;
+        set((state) => {
+          const existing = (state.productiveFeedback ?? []).find((item) => item.id === id);
+          if (grading.score >= 4.5 && !existing) return state;
+          if (existing && existing.score === grading.score && existing.rationale === grading.rationale &&
+              JSON.stringify(existing.improvements) === JSON.stringify(grading.improvements ?? [])) return state;
+          const others = (state.productiveFeedback ?? []).filter((item) => item.id !== id);
+          if (grading.score >= 4.5) return { productiveFeedback: others };
+          return { productiveFeedback: [...others, {
+            id, section, taskNumber, score: grading.score, rationale: grading.rationale ?? "Revisa esta respuesta y vuelve a intentarlo.",
+            improvements: grading.improvements ?? [], profileUsername, recordedAt: new Date().toISOString(),
+          }] };
+        });
+      },
       markStudyDay: (profileUsername, date) => {
         const key = notebookProfileKey(profileUsername);
         const day = localStudyDate(date);
@@ -64,7 +104,12 @@ export const useErrorNotebookStore = create<ErrorNotebookState>()(
         if (get().processedAttemptIds.includes(attemptId)) return;
         set((state) => {
           const entries = [...state.entries];
+          const masteredTopics = [...(state.masteredTopics ?? [])];
           for (const topic of topics) {
+            const masteredIndex = masteredTopics.findIndex((saved) =>
+              saved.profileUsername === profileUsername && saved.section === topic.section && saved.failed_rule === topic.failed_rule
+            );
+            if (masteredIndex >= 0) masteredTopics.splice(masteredIndex, 1);
             const existingIndex = entries.findIndex(
               (entry) =>
                 entry.profileUsername === profileUsername &&
@@ -85,6 +130,7 @@ export const useErrorNotebookStore = create<ErrorNotebookState>()(
           }
           return {
             entries,
+            masteredTopics,
             processedAttemptIds: [...state.processedAttemptIds, attemptId],
           };
         });
@@ -103,13 +149,26 @@ export const useErrorNotebookStore = create<ErrorNotebookState>()(
           masteredByProfile: mastered
             ? { ...state.masteredByProfile, [profileKey]: (state.masteredByProfile[profileKey] ?? 0) + 1 }
             : state.masteredByProfile,
+          masteredTopics: mastered
+            ? [...(state.masteredTopics ?? []), {
+                id: entry.id,
+                section: entry.section,
+                failed_rule: entry.failed_rule,
+                profileUsername: entry.profileUsername,
+                masteredAt: new Date().toISOString(),
+              }]
+            : state.masteredTopics,
         }));
         return mastered;
       },
     }),
     {
       name: "itep-simulator:error-notebook",
-      version: 1,
+      version: 3,
+      migrate: (persisted) => {
+        const old = persisted as Partial<ErrorNotebookState>;
+        return { ...old, masteredTopics: old.masteredTopics ?? [], productiveFeedback: old.productiveFeedback ?? [] } as ErrorNotebookState;
+      },
       storage: createJSONStorage(() => localStorage),
       skipHydration: true,
       partialize: (state) => ({
@@ -117,6 +176,8 @@ export const useErrorNotebookStore = create<ErrorNotebookState>()(
         processedAttemptIds: state.processedAttemptIds,
         studyDaysByProfile: state.studyDaysByProfile,
         masteredByProfile: state.masteredByProfile,
+        masteredTopics: state.masteredTopics,
+        productiveFeedback: state.productiveFeedback,
       }),
     }
   )
@@ -131,4 +192,17 @@ export async function recordCompletedAttempt(
     await useErrorNotebookStore.persist.rehydrate();
   }
   useErrorNotebookStore.getState().recordAttempt(attemptId, profileUsername, topics);
+}
+
+export async function saveProductiveFeedback(
+  attemptId: string,
+  profileUsername: string | null,
+  section: "Writing" | "Speaking",
+  taskNumber: 1 | 2,
+  grading: RubricResult
+): Promise<void> {
+  if (!useErrorNotebookStore.persist.hasHydrated()) {
+    await useErrorNotebookStore.persist.rehydrate();
+  }
+  useErrorNotebookStore.getState().recordProductiveFeedback(attemptId, profileUsername, section, taskNumber, grading);
 }

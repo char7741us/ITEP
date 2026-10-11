@@ -8,7 +8,7 @@ import { useActiveProfile } from "@/lib/storage/profileRepo";
 import { getSpeakingAudio, saveSpeakingAudio } from "@/lib/storage/attemptsRepo";
 import { startRecording, type RecordingHandle } from "@/lib/audio/recorder";
 import { comprehensionRule, type FailedTopic } from "@/lib/notebook/failedRules";
-import { recordCompletedAttempt } from "@/lib/notebook/store";
+import { recordCompletedAttempt, saveProductiveFeedback } from "@/lib/notebook/store";
 import type { RubricResult } from "@/lib/types/attempt";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -87,6 +87,14 @@ export function DailySessionPractice({ session }: { session: DailySession }) {
     const questions = section === "grammar" ? session.grammar : section === "reading" ? session.reading.questions : session.listening.questions;
     return total + questions.reduce((count, item, index) => count + Number(answers[`${section}-${index}`] === item.correctIndex), 0);
   }, 0);
+  const highPracticeGoal = answeredCount === 9 && score >= 8 &&
+    (progress?.writingGrade?.score ?? 0) >= 4.5 && (progress?.speakingGrade?.score ?? 0) >= 4.5;
+  const encouragement = [
+    "Un error bien explicado vale más que diez respuestas al azar.",
+    "La constancia se construye con una sesión concreta, no con una sesión perfecta.",
+    "Hoy practica la precisión: señala qué evidencia sostiene cada respuesta.",
+    "Cuando una opción parece correcta, busca también por qué las otras no lo son.",
+  ][(session.day - 1) % 4];
 
   function answer(id: string, choice: number) { store.getState().answer(key, id, choice); }
 
@@ -116,6 +124,7 @@ export function DailySessionPractice({ session }: { session: DailySession }) {
     try {
       const result = await grade("/api/grade/writing", { taskTitle: `Día ${session.day}: Writing ${session.writing.taskNumber}`, prompt: session.writing.prompt, minWords: session.writing.minWords, maxWords: session.writing.maxWords, studentText: writingText });
       store.getState().setWritingGrade(key, result);
+      await saveProductiveFeedback(`daily:${key}`, profile?.username ?? null, "Writing", session.writing.taskNumber, result);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "No se pudo evaluar Writing."); }
     finally { setBusy(null); }
   }
@@ -131,6 +140,7 @@ export function DailySessionPractice({ session }: { session: DailySession }) {
       for (const byte of bytes) binary += String.fromCharCode(byte);
       const result = await grade("/api/grade/speaking", { taskTitle: `Día ${session.day}: Speaking ${session.speaking.taskNumber}`, prompt: session.speaking.prompt, audioBase64: btoa(binary), mimeType: blob.type || "audio/webm" });
       store.getState().setSpeakingGrade(key, result);
+      await saveProductiveFeedback(`daily:${key}`, profile?.username ?? null, "Speaking", session.speaking.taskNumber, result);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "No se pudo evaluar Speaking."); }
     finally { setBusy(null); }
   }
@@ -159,6 +169,11 @@ export function DailySessionPractice({ session }: { session: DailySession }) {
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-10">
       <div className="space-y-2"><Link href="/practica-diaria" className="text-sm text-primary underline">← Volver a los 60 días</Link><h1 className="text-3xl font-semibold">Día {session.day}: {session.theme}</h1><p className="text-muted-foreground">Sesión corta de las cinco áreas · {answeredCount}/9 preguntas respondidas {progress?.completedAt && "· Completada"}</p></div>
+      <section className="rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/10 to-amber-100/70 p-4 dark:to-amber-950/20" aria-label="Misión del día">
+        <p className="font-bold">🌟 Tu misión de hoy</p><p className="mt-1 text-sm">{encouragement}</p>
+        <div className="mt-3 h-2 overflow-hidden rounded-full bg-background" role="progressbar" aria-valuenow={answeredCount} aria-valuemin={0} aria-valuemax={9} aria-label="Preguntas respondidas"><div className="h-full rounded-full bg-primary transition-all" style={{ width: `${answeredCount / 9 * 100}%` }} /></div>
+        <p className="mt-2 text-xs text-muted-foreground">{answeredCount}/9 respondidas · {score} aciertos. Meta alta opcional: al menos 8/9 y 4.5/6 en Writing y Speaking. Completar la sesión no depende de la IA.</p>
+      </section>
       <Card><CardHeader><CardTitle>Grammar</CardTitle><CardDescription>Responde tres preguntas de gramática. Cada respuesta se guarda automáticamente.</CardDescription></CardHeader><CardContent className="space-y-3">{session.grammar.map((item, i) => <QuestionBlock key={i} item={item} id={`grammar-${i}`} selected={answers[`grammar-${i}`]} onAnswer={answer} />)}</CardContent></Card>
       <Card><CardHeader><CardTitle>Reading</CardTitle><CardDescription>Lee el texto y responde las tres preguntas.</CardDescription></CardHeader><CardContent className="space-y-4"><article className="whitespace-pre-line rounded-lg bg-muted/40 p-4 leading-relaxed"><h3 className="mb-2 font-semibold">{session.reading.title}</h3>{session.reading.passage}</article>{session.reading.questions.map((item, i) => <QuestionBlock key={i} item={item} id={`reading-${i}`} selected={answers[`reading-${i}`]} onAnswer={answer} />)}</CardContent></Card>
       <Card><CardHeader><CardTitle>Listening</CardTitle><CardDescription>Escucha el diálogo antes de responder. Puedes repetirlo para estudiar.</CardDescription></CardHeader><CardContent className="space-y-4"><audio controls preload="none" src={session.listening.audioAssetPath} className="w-full" aria-label={`Diálogo del día ${session.day}`}><a href={session.listening.audioAssetPath}>Descargar audio</a></audio>{session.listening.questions.map((item, i) => <QuestionBlock key={i} item={item} id={`listening-${i}`} selected={answers[`listening-${i}`]} onAnswer={answer} />)}<Button variant="outline" onClick={() => setShowTranscript((value) => !value)}>{showTranscript ? "Ocultar" : "Ver"} transcripción</Button>{showTranscript && <div className="space-y-2 rounded-lg bg-muted/40 p-4 text-sm">{session.listening.lines.map((line, i) => <p key={i}><strong>{line.speaker}:</strong> {line.text}</p>)}</div>}</CardContent></Card>
@@ -166,7 +181,7 @@ export function DailySessionPractice({ session }: { session: DailySession }) {
       <Card><CardHeader><CardTitle>Speaking · Tarea {session.speaking.taskNumber}</CardTitle><CardDescription>{session.speaking.prepSeconds} segundos para preparar y {session.speaking.responseSeconds} segundos recomendados para responder.</CardDescription></CardHeader><CardContent className="space-y-3"><p>{session.speaking.prompt}</p><div className="flex flex-wrap gap-2">{recording ? <Button onClick={stopAudio}>Detener y guardar</Button> : <Button onClick={startAudio}>{progress?.speakingAudioKey ? "Volver a grabar" : "Grabar respuesta"}</Button>}<Button variant="outline" disabled={!progress?.speakingAudioKey || busy !== null || aiAvailable !== true} onClick={evaluateSpeaking}>{busy === "speaking" ? "Evaluando…" : "Evaluación orientativa con IA"}</Button></div>{recording && <p role="status" className="text-sm text-red-700">Grabando… Pulsa «Detener y guardar» al terminar.</p>}{audioUrl && <audio controls src={audioUrl} className="w-full" aria-label="Tu respuesta oral grabada" />}{progress?.speakingAudioKey && !audioUrl && <p className="text-sm text-muted-foreground">Grabación guardada en este navegador.</p>}{!progress?.speakingPracticed && <Button variant="ghost" onClick={() => store.getState().markSpeakingPracticed(key)}>Hice la práctica oral sin grabación</Button>}{progress?.speakingPracticed && !progress.speakingAudioKey && <p className="text-sm text-muted-foreground">Práctica oral marcada como realizada, sin grabación.</p>}<GradeResult grade={progress?.speakingGrade} /></CardContent></Card>
       {aiAvailable === false && <p role="status" className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">La clave de Gemini del sitio no está configurada correctamente. Puedes completar y guardar toda la práctica; la evaluación automática de Writing y Speaking estará disponible cuando se actualice la clave.</p>}
       {error && <p role="alert" className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-900">{error}</p>}
-      <Card><CardHeader><CardTitle>{progress?.completedAt ? "Sesión completada" : "Terminar el día"}</CardTitle><CardDescription>Necesitas responder las 9 preguntas, escribir dentro del rango de palabras y practicar oralmente. La grabación y la evaluación con IA son opcionales.</CardDescription></CardHeader><CardContent className="space-y-3"><p className="text-sm">Resultado objetivo: {score}/9 aciertos.</p>{progress?.completedAt ? <p className="text-sm">Tus errores ya se añadieron al Cuaderno de Errores. Puedes volver a repasar esta sesión mañana.</p> : <Button disabled={!canComplete || recording} onClick={complete}>Completar día {session.day}</Button>}<div className="flex gap-4 text-sm"><Link href="/practica-diaria" className="text-primary underline">Ver calendario</Link><Link href="/cuaderno-errores" className="text-primary underline">Cuaderno de Errores</Link></div></CardContent></Card>
+      <Card><CardHeader><CardTitle>{progress?.completedAt ? "Sesión completada" : "Terminar el día"}</CardTitle><CardDescription>Necesitas responder las 9 preguntas, escribir dentro del rango de palabras y practicar oralmente. La grabación y la evaluación con IA son opcionales.</CardDescription></CardHeader><CardContent className="space-y-3"><p className="text-sm">Resultado objetivo: {score}/9 aciertos. {highPracticeGoal ? "🌟 ¡Alcanzaste la meta alta de hoy!" : answeredCount === 9 ? "🌱 Tus errores son tu plan de repaso." : "Cada respuesta te acerca al final."}</p>{progress?.completedAt ? <p className="text-sm">Tus errores ya se añadieron al Cuaderno de Errores. Puedes volver a repasar esta sesión mañana.</p> : <Button disabled={!canComplete || recording} onClick={complete}>Completar día {session.day}</Button>}<div className="flex gap-4 text-sm"><Link href="/practica-diaria" className="text-primary underline">Ver calendario</Link><Link href="/cuaderno-errores" className="text-primary underline">Cuaderno de Errores</Link></div></CardContent></Card>
     </div>
   );
 }

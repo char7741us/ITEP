@@ -4,6 +4,7 @@ import { validateContentPack } from "./schema";
 import { itepAcademicPlusV1 } from "./packs/itep-academic-plus-v1";
 import { itepAcademicPlusV2 } from "./packs/itep-academic-plus-v2";
 import { newFullPacks } from "./packs/daily-full/build";
+import { strictC1Packs } from "./packs/strict-c1";
 
 const ORIGINAL_PACKS: Record<string, ExamContentPack> = {
   "itep-academic-plus@1.0.0": itepAcademicPlusV1,
@@ -31,13 +32,13 @@ const REGISTRY: Record<string, ExamContentPack> = {
   ...ORIGINAL_PACKS,
   ...Object.fromEntries(mixedPacks),
   ...Object.fromEntries(newFullPacks.map((pack) => [`${pack.manifest.packId}@${pack.manifest.version}`, pack])),
+  ...Object.fromEntries(strictC1Packs.map((pack) => [`${pack.manifest.packId}@${pack.manifest.version}`, pack])),
 };
 
 export const DEFAULT_CONTENT_PACK_KEY = "itep-academic-plus@1.0.0";
 
-// Old mixed packs remain loadable for saved attempts, but new exams rotate
-// through six genuinely different banks before repeating any complete form.
-const NEW_PACK_KEYS = newFullPacks.map((pack) => `${pack.manifest.packId}@${pack.manifest.version}`);
+// Historical packs remain loadable for saved attempts; new exams use the stricter C1 edition.
+const NEW_PACK_KEYS = strictC1Packs.map((pack) => `${pack.manifest.packId}@${pack.manifest.version}`);
 const PACKS_BY_MODE: Record<ExamMode, string[]> = {
   intensive: NEW_PACK_KEYS,
   practice: NEW_PACK_KEYS,

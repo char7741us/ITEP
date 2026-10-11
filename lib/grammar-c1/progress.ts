@@ -67,7 +67,7 @@ export const useGrammarProgressStore = create<GrammarProgressState>()(
       recordDayResult: (profileKey, day, correct, total) => {
         set((state) => {
           const existing = state.daysByProfile[profileKey]?.[day];
-          const passed = correct >= Math.ceil(total * 0.8);
+          const passed = correct >= Math.ceil(total * 0.85);
           return {
             daysByProfile: {
               ...state.daysByProfile,

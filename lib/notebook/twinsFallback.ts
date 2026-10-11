@@ -1,4 +1,5 @@
 import { dailySessions } from "@/lib/content/daily/build";
+import { grammarC1Topics, sentenceParts } from "@/lib/grammar-c1/bank";
 import { getCoachGuide } from "./coach";
 import { comprehensionRule, type NotebookSection } from "./failedRules";
 
@@ -15,6 +16,27 @@ function normalized(value: string): string {
 }
 
 export function getBankTwins(section: NotebookSection, failedRule: string): NotebookQuestion[] | null {
+  if (section === "Grammar") {
+    const topic = grammarC1Topics.find((candidate) => normalized(failedRule).startsWith(normalized(`${candidate.title}:`)));
+    if (topic) {
+      const errors = topic.questions.filter((question) => question.kind === "error-word");
+      const completions = topic.questions.filter((question) => question.kind === "complete-sentence");
+      const exact = errors.find((question) => normalized(failedRule).includes(normalized(question.explanation)));
+      const selected = [exact ?? errors[0], errors.find((question) => question !== exact && question !== errors[0]) ?? errors[1], completions[0]];
+      return selected.map((question): NotebookQuestion => {
+        if (question.kind === "complete-sentence") return {
+          context: "", question: question.sentence, options: question.choices,
+          correctIndex: "ABCD".indexOf(question.correct), explanation: question.explanation,
+        };
+        const parts = sentenceParts(question.sentence);
+        return {
+          context: "", question: `Identify the ONE incorrect word: ${parts.map((part) => part.mark ? `[${part.mark}]${part.text}` : part.text).join("")}`,
+          options: parts.filter((part) => part.mark).map((part) => part.text) as NotebookQuestion["options"],
+          correctIndex: "ABCD".indexOf(question.wrong), explanation: `${question.explanation} La forma correcta es «${question.correction}».`,
+        };
+      });
+    }
+  }
   const guide = getCoachGuide(section, failedRule);
   const candidates: NotebookQuestion[] = [];
 
