@@ -4,7 +4,7 @@ import { useGrammarProgressStore } from "./progress";
 describe("Grammar C1 progress", () => {
   beforeEach(() => {
     localStorage.clear();
-    useGrammarProgressStore.setState({ byProfile: {} });
+    useGrammarProgressStore.setState({ byProfile: {}, daysByProfile: {} });
   });
 
   it("counts rounds and completed items without mixing profiles", () => {
@@ -21,5 +21,17 @@ describe("Grammar C1 progress", () => {
     });
     expect(useGrammarProgressStore.getState().byProfile["profile:other"]).toBeUndefined();
     expect(localStorage.getItem("itep-simulator:grammar-c1-progress")).toContain("subject-verb-agreement:0");
+  });
+
+  it("approves a day at 80 percent and remembers the best attempt", () => {
+    const store = useGrammarProgressStore.getState();
+    store.recordDayResult("guest", 1, 3, 5);
+    expect(useGrammarProgressStore.getState().daysByProfile.guest[1].completedAt).toBeUndefined();
+    store.recordDayResult("guest", 1, 4, 5);
+    const result = useGrammarProgressStore.getState().daysByProfile.guest[1];
+    expect(result.attempts).toBe(2);
+    expect(result.bestCorrect).toBe(4);
+    expect(result.completedAt).toBeTruthy();
+    expect(localStorage.getItem("itep-simulator:grammar-c1-progress")).toContain('"completedAt"');
   });
 });

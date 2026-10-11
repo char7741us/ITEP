@@ -11,6 +11,8 @@ Simulacro de práctica completo para el examen **iTEP Academic-Plus**, construid
 - **Niveles CEFR** automáticos (Below B2, B2, C1, C2)
 - **Dashboard de progreso** con gráficos de tendencia por habilidad
 - **Cuaderno de Errores** local: agrupa temas fallados, ofrece mini lecciones ilustradas y retos de tres preguntas; registra días de estudio y logros por perfil. Tres aciertos consecutivos dominan un tema
+- **Grammar C1 en 20 días** dentro del Cuaderno: 13 temas, 93 preguntas originales de detección de una palabra incorrecta, repasos mixtos y reto final con preguntas nuevas. El avance diario se guarda localmente por perfil; cada día se aprueba con al menos 80 % de aciertos
+- **Reintento de calificación** en resultados: cuando Gemini falla, Writing y Speaking pueden calificarse posteriormente desde las respuestas ya guardadas sin repetir el simulacro
 - **6 simulacros completos nuevos** con lecturas, preguntas y audios distintos; los 2 bancos anteriores y sus 30 combinaciones permanecen disponibles para abrir resultados históricos, pero no se asignan a simulacros nuevos
 - **60 sesiones cortas de práctica** con Grammar, Reading, Listening, Writing y Speaking: 60 textos, 60 diálogos con audio de dos voces, 540 preguntas objetivas y 120 consignas de producción; avance local por perfil
 - **Modo Práctica** y **Modo Entrenamiento Intensivo**
@@ -93,6 +95,7 @@ npm run render:mock-audio  # Reconstruye los 36 audios de los seis simulacros nu
 │   ├── content/            # Packs de contenido
 │   ├── exam/               # Máquina de estados y scoring
 │   ├── gemini/             # Integración con Google Gemini
+│   ├── grammar-c1/         # Banco, plan de 20 días y progreso local
 │   ├── notebook/           # Reglas falladas, estado persistente y rachas
 │   ├── storage/            # Persistencia (IndexedDB, localStorage)
 │   └── types/              # Definiciones TypeScript
@@ -105,7 +108,7 @@ npm run render:mock-audio  # Reconstruye los 36 audios de los seis simulacros nu
 - **UI**: React 19 + TypeScript
 - **Estilos**: Tailwind CSS v4 + shadcn/ui
 - **State**: XState v5 (máquina de estados del examen)
-- **IA**: Google Gemini (gemini-3.7-flash, con respaldo gemini-3.5-flash-lite) para calificación
+- **IA**: Google Gemini (gemini-3.8-flash, con respaldo gemini-3.5-flash-lite) para calificación
 - **Almacenamiento**: IndexedDB + localStorage
 - **Tests**: Vitest + Testing Library
 
@@ -123,3 +126,5 @@ Si generaste audio real con `npm run generate:audio`, los archivos `.wav` en `pu
 Las 60 sesiones de `/practica-diaria` y los seis simulacros nuevos usan escenarios originales escritos para este proyecto. No se han copiado bancos de examen ni preguntas oficiales. La distribución de destrezas y los tipos de Writing/Speaking se inspiran en el [folleto oficial iTEP Academic](https://www.itepexam.com/wp-content/uploads/2022/05/iTEP-Academic-Brochure.pdf) y en la [guía de preparación iTEP](https://www.itepexam.com/wp-content/uploads/2013/10/iTEP-Preparation-Guide-3rd-Edition-22JUN12.pdf). La [página oficial de exámenes de práctica](https://www.itepexam.com/schedule-itep/prepare/practice-tests/) ofrece sus formularios auténticos por separado; este material no pretende sustituirlos.
 
 Cada sesión diaria es deliberadamente más corta que un simulacro completo: contiene tres preguntas de Grammar, tres de Reading, tres de Listening, una tarea de Writing y una de Speaking. Se alternan mensajes breves y ensayos, así como los dos tipos de Speaking. Los audios estáticos fueron sintetizados con las voces de macOS y no dependen de Gemini. El progreso queda en `localStorage` y las grabaciones en `IndexedDB` del mismo navegador; borrar los datos del sitio elimina ese avance.
+
+El plan `/cuaderno-errores/grammar` dedica cuatro días a subject–verb agreement, doce a los demás temas esenciales, tres a repasos mixtos y el último a un reto de trece preguntas inéditas. La guía oficial de iTEP permite identificar una palabra **o frase** incorrecta; este módulo usa deliberadamente solo palabras, como entrenamiento específico, y no es una certificación C1. No se reproducen preguntas oficiales.

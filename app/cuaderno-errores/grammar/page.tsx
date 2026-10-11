@@ -2,9 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, CircleHelp, RotateCcw, Sparkles, Target } from "lucide-react";
+import { ArrowLeft, ArrowRight, CalendarDays, Check, CircleHelp, RotateCcw, Sparkles, Target } from "lucide-react";
 import { correctedSentence, grammarC1Topics, sentenceParts } from "@/lib/grammar-c1/bank";
 import type { Mark } from "@/lib/grammar-c1/bank";
+import { grammarC1Days } from "@/lib/grammar-c1/plan";
+import type { QuestionRef } from "@/lib/grammar-c1/plan";
 import { useGrammarProgressStore } from "@/lib/grammar-c1/progress";
 import { notebookProfileKey, useErrorNotebookStore } from "@/lib/notebook/store";
 import { useActiveProfile } from "@/lib/storage/profileRepo";
@@ -18,9 +20,11 @@ export default function GrammarC1Page() {
   const profile = useActiveProfile();
   const profileKey = notebookProfileKey(profile?.username ?? null);
   const progressByProfile = useGrammarProgressStore((state) => state.byProfile);
+  const daysByProfile = useGrammarProgressStore((state) => state.daysByProfile);
   const [hydrated, setHydrated] = useState(false);
   const [activeTopicId, setActiveTopicId] = useState<string | null>(null);
-  const [roundIds, setRoundIds] = useState<number[]>([]);
+  const [activeDay, setActiveDay] = useState<number | null>(null);
+  const [roundRefs, setRoundRefs] = useState<QuestionRef[]>([]);
   const [position, setPosition] = useState(0);
   const [selected, setSelected] = useState<Mark | null>(null);
   const [roundCorrect, setRoundCorrect] = useState(0);
@@ -35,21 +39,47 @@ export default function GrammarC1Page() {
     return () => { mounted = false; };
   }, []);
 
-  const topic = grammarC1Topics.find((item) => item.id === activeTopicId);
-  const questionIndex = roundIds[position];
-  const question = topic && questionIndex !== undefined ? topic.questions[questionIndex] : null;
+  const day = grammarC1Days.find((item) => item.day === activeDay);
+  const selectedTopic = grammarC1Topics.find((item) => item.id === activeTopicId);
+  const questionRef = roundRefs[position];
+  const topic = grammarC1Topics.find((item) => item.id === questionRef?.topicId) ?? selectedTopic ?? grammarC1Topics[0];
+  const question = questionRef ? topic.questions[questionRef.index] : null;
   const topicProgress = progressByProfile[profileKey] ?? {};
+  const dayProgress = daysByProfile[profileKey] ?? {};
+  const completedDays = grammarC1Days.filter((item) => dayProgress[item.day]?.completedAt).length;
   const totalQuestions = grammarC1Topics.reduce((total, item) => total + item.questions.length, 0);
   const completedQuestions = grammarC1Topics.reduce((total, item) => total + (topicProgress[item.id]?.completedIds.length ?? 0), 0);
 
   async function startTopic(topicId: string) {
     const chosen = grammarC1Topics.find((item) => item.id === topicId);
     if (!chosen) return;
+    if (!useGrammarProgressStore.persist.hasHydrated()) await useGrammarProgressStore.persist.rehydrate();
     const round = useGrammarProgressStore.getState().startRound(profileKey, topicId);
     const count = Math.min(roundSize, chosen.questions.length);
     const first = (round * count) % chosen.questions.length;
-    setRoundIds(Array.from({ length: count }, (_, offset) => (first + offset) % chosen.questions.length));
+    setRoundRefs(Array.from({ length: count }, (_, offset) => ({ topicId, index: (first + offset) % chosen.questions.length })));
     setActiveTopicId(topicId);
+    setActiveDay(null);
+    setPosition(0);
+    setSelected(null);
+    setRoundCorrect(0);
+    setFinished(false);
+    answeredRef.current = false;
+    try {
+      if (!useErrorNotebookStore.persist.hasHydrated()) await useErrorNotebookStore.persist.rehydrate();
+      useErrorNotebookStore.getState().markStudyDay(profile?.username ?? null, new Date());
+    } catch (error) {
+      console.error("No se pudo registrar el día de práctica de Grammar:", error);
+    }
+  }
+
+  async function startDay(dayNumber: number) {
+    const chosen = grammarC1Days.find((item) => item.day === dayNumber);
+    if (!chosen) return;
+    if (!useGrammarProgressStore.persist.hasHydrated()) await useGrammarProgressStore.persist.rehydrate();
+    setRoundRefs(chosen.refs);
+    setActiveTopicId(null);
+    setActiveDay(dayNumber);
     setPosition(0);
     setSelected(null);
     setRoundCorrect(0);
@@ -67,13 +97,16 @@ export default function GrammarC1Page() {
     if (!topic || !question || answeredRef.current) return;
     answeredRef.current = true;
     const correct = mark === question.wrong;
-    useGrammarProgressStore.getState().recordAnswer(profileKey, topic.id, `${topic.id}:${questionIndex}`, correct);
+    useGrammarProgressStore.getState().recordAnswer(profileKey, topic.id, `${topic.id}:${questionRef.index}`, correct);
     setSelected(mark);
     if (correct) setRoundCorrect((value) => value + 1);
   }
 
   function next() {
-    if (position === roundIds.length - 1) setFinished(true);
+    if (position === roundRefs.length - 1) {
+      if (day) useGrammarProgressStore.getState().recordDayResult(profileKey, day.day, roundCorrect, roundRefs.length);
+      setFinished(true);
+    }
     else {
       setPosition((value) => value + 1);
       setSelected(null);
@@ -90,22 +123,22 @@ export default function GrammarC1Page() {
         <div className="relative grid gap-5 sm:grid-cols-[1fr_auto] sm:items-center">
           <div>
             <p className="mb-2 inline-flex items-center gap-2 rounded-full bg-white/75 px-3 py-1 text-xs font-extrabold uppercase tracking-wider text-primary dark:bg-white/10"><Sparkles className="h-3.5 w-3.5" /> Tu laboratorio de Grammar C1</p>
-            <h1 className="text-3xl font-black leading-tight sm:text-5xl">Detecta una palabra. Domina la regla. 🕵️‍♀️</h1>
-            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-foreground/80 sm:text-base">Practica identificar la palabra incorrecta en cada oración. Comienza por subject–verb agreement y avanza por los temas esenciales de gramática avanzada, con una explicación breve después de cada respuesta.</p>
+            <h1 className="text-3xl font-black leading-tight sm:text-5xl">Grammar C1 en 20 días 🕵️‍♀️</h1>
+            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-foreground/80 sm:text-base">Un día, una meta: recorre los 13 temas esenciales, repasa los errores que se esconden y termina con un reto mixto. Siempre eliges una sola palabra incorrecta y recibes una explicación.</p>
           </div>
           <div className="rounded-3xl bg-white/80 p-5 text-center shadow-sm dark:bg-white/10" aria-label="Progreso de Grammar C1">
             <div className="text-4xl font-black text-primary">{hydrated ? completedQuestions : "…"}<span className="text-xl text-muted-foreground">/{totalQuestions}</span></div>
-            <p className="mt-1 text-xs font-semibold text-muted-foreground">preguntas acertadas al menos una vez</p>
+            <p className="mt-1 text-xs font-semibold text-muted-foreground">preguntas acertadas · {completedDays}/20 días aprobados</p>
           </div>
         </div>
       </section>
 
-      {topic ? (
+      {(selectedTopic || day) ? (
         <div className="space-y-5">
-          <Button variant="outline" onClick={() => setActiveTopicId(null)}><ArrowLeft className="h-4 w-4" /> Ver todos los temas</Button>
+          <Button variant="outline" onClick={() => { setActiveTopicId(null); setActiveDay(null); }}><ArrowLeft className="h-4 w-4" /> Volver al plan</Button>
           <section className="rounded-[2rem] border border-[#c6b7f1] bg-[#f5f0ff] p-5 dark:border-[#6b5b92] dark:bg-[#38304f] sm:p-7">
             <div className="flex flex-wrap items-start justify-between gap-4">
-              <div><p className="text-xs font-extrabold uppercase tracking-widest text-[#7353ad] dark:text-[#d8c8ff]">Mini lección</p><h2 className="mt-1 text-2xl font-black">{topic.title}</h2><p className="mt-2 max-w-2xl text-sm leading-relaxed">{topic.rule}</p></div>
+              <div><p className="text-xs font-extrabold uppercase tracking-widest text-[#7353ad] dark:text-[#d8c8ff]">{day ? `Día ${day.day} de 20 · ${day.kind === "lesson" ? "Lección" : day.kind === "review" ? "Repaso" : "Reto final"}` : "Práctica libre"}</p><h2 className="mt-1 text-2xl font-black">{day?.title ?? topic.title}</h2>{day && <p className="mt-1 text-sm font-semibold">{day.focus}</p>}<p className="mt-2 max-w-2xl text-sm leading-relaxed"><span className="font-bold">{topic.title}:</span> {topic.rule}</p></div>
               <div className="rounded-2xl bg-white/75 px-4 py-3 text-sm font-bold dark:bg-white/10">🎯 {topic.focus}</div>
             </div>
             <div className="mt-4 rounded-2xl border-l-4 border-[#a88ae5] bg-white/80 p-3 text-sm dark:bg-white/10"><span className="font-bold">Ejemplo:</span> <span lang="en">{topic.example}</span></div>
@@ -114,15 +147,15 @@ export default function GrammarC1Page() {
 
           {finished ? (
             <section className="rounded-[2rem] border border-primary/15 bg-white p-8 text-center shadow-sm dark:bg-card">
-              <div className="text-6xl" aria-hidden="true">{roundCorrect === roundIds.length ? "🌟" : "🌱"}</div>
-              <h3 className="mt-3 text-2xl font-black">{roundCorrect === roundIds.length ? "¡Ronda impecable!" : "¡Una ronda más, un poco más fuerte!"}</h3>
-              <p className="mt-2 text-sm text-muted-foreground">Acertaste {roundCorrect} de {roundIds.length}. Las respuestas correctas quedaron guardadas en este navegador.</p>
-              <div className="mt-5 flex flex-wrap justify-center gap-3"><Button onClick={() => startTopic(topic.id)}><RotateCcw className="h-4 w-4" /> Siguiente ronda</Button><Button variant="outline" onClick={() => setActiveTopicId(null)}>Explorar otro tema</Button></div>
+              <div className="text-6xl" aria-hidden="true">{roundCorrect >= Math.ceil(roundRefs.length * 0.8) ? "🌟" : "🌱"}</div>
+              <h3 className="mt-3 text-2xl font-black">{roundCorrect >= Math.ceil(roundRefs.length * 0.8) ? "¡Día aprobado!" : "¡Practiquemos otra vez!"}</h3>
+              <p className="mt-2 text-sm text-muted-foreground">Acertaste {roundCorrect} de {roundRefs.length}. {day ? `Para aprobar este día necesitas ${Math.ceil(roundRefs.length * 0.8)} aciertos. ` : ""}Tu progreso queda guardado en este navegador.</p>
+              <div className="mt-5 flex flex-wrap justify-center gap-3"><Button onClick={() => day ? startDay(day.day) : startTopic(topic.id)}><RotateCcw className="h-4 w-4" /> Repetir {day ? "día" : "tema"}</Button>{day && day.day < 20 && <Button onClick={() => startDay(day.day + 1)}>Ir al día {day.day + 1} <ArrowRight className="h-4 w-4" /></Button>}<Button variant="outline" onClick={() => { setActiveTopicId(null); setActiveDay(null); }}>Ver el plan</Button></div>
             </section>
           ) : question ? (
             <section className="rounded-[2rem] border border-primary/10 bg-white p-5 shadow-sm dark:bg-card sm:p-8" aria-label="Ejercicio de encontrar una palabra incorrecta">
-              <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xs font-extrabold uppercase tracking-wider text-primary">Pregunta {position + 1} de {roundIds.length}</p><p className="text-xs font-semibold text-muted-foreground">Elige solo una palabra incorrecta</p></div>
-              <div className="mt-4 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-[#a88ae5] transition-all" style={{ width: `${((position + 1) / roundIds.length) * 100}%` }} /></div>
+              <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xs font-extrabold uppercase tracking-wider text-primary">Pregunta {position + 1} de {roundRefs.length}</p><p className="text-xs font-semibold text-muted-foreground">Elige solo una palabra incorrecta</p></div>
+              <div className="mt-4 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-[#a88ae5] transition-all" style={{ width: `${((position + 1) / roundRefs.length) * 100}%` }} /></div>
               <p className="mt-6 text-sm font-semibold text-muted-foreground">Lee la oración. Las cuatro opciones están subrayadas:</p>
               <div className="mt-4 rounded-3xl bg-[#fff9e7] p-5 text-xl font-medium leading-[2.7] dark:bg-[#4b402b] sm:text-2xl" lang="en">
                 {sentenceParts(question.sentence).map((part, index) => part.mark ? (
@@ -141,7 +174,7 @@ export default function GrammarC1Page() {
                   <p className="font-extrabold">{selected === question.wrong ? "¡Exacto! Encontraste la palabra 🥳" : `Casi. La palabra incorrecta era ${question.wrong}. 💡`}</p>
                   <p className="mt-2 text-sm leading-relaxed">{question.explanation}</p>
                   <p className="mt-2 rounded-xl bg-white/70 p-3 text-sm dark:bg-white/10"><span className="font-bold">Así queda:</span> <span lang="en">{correctedSentence(question)}</span></p>
-                  <Button className="mt-4" onClick={next}>{position === roundIds.length - 1 ? "Ver mi resultado" : "Siguiente pregunta"}<ArrowRight className="h-4 w-4" /></Button>
+                  <Button className="mt-4" onClick={next}>{position === roundRefs.length - 1 ? "Ver mi resultado" : "Siguiente pregunta"}<ArrowRight className="h-4 w-4" /></Button>
                 </div>
               )}
             </section>
@@ -150,7 +183,18 @@ export default function GrammarC1Page() {
       ) : (
         <>
           <section className="rounded-[2rem] border border-[#efbd7a] bg-gradient-to-r from-[#fff0cf] to-[#fff9e9] p-5 dark:border-[#766041] dark:from-[#574327] dark:to-[#493c2b] sm:p-7">
-            <div className="flex items-start gap-4"><span className="text-5xl" aria-hidden="true">🔎</span><div><p className="text-xs font-extrabold uppercase tracking-widest text-[#96601b] dark:text-[#f8d39a]">Empieza aquí · tu punto de partida</p><h2 className="mt-1 text-2xl font-black">Subject–verb agreement</h2><p className="mt-2 max-w-2xl text-sm leading-relaxed">El truco es encontrar el verdadero sujeto: <span lang="en" className="font-bold">The collection of maps <u>is</u>...</span> El verbo responde a <em>collection</em>, no a <em>maps</em>. Practica 20 casos originales, cinco a la vez.</p><Button className="mt-4" onClick={() => startTopic("subject-verb-agreement")}>Practicar concordancia <ArrowRight className="h-4 w-4" /></Button></div></div>
+            <div className="flex items-start gap-4"><span className="text-5xl" aria-hidden="true">🗓️</span><div><p className="text-xs font-extrabold uppercase tracking-widest text-[#96601b] dark:text-[#f8d39a]">Tu ruta intensiva</p><h2 className="mt-1 text-2xl font-black">20 días para fortalecer todo tu Grammar</h2><p className="mt-2 max-w-2xl text-sm leading-relaxed">Los días 1–4 atacan subject–verb agreement, tu dificultad principal; del 5 al 16 cubres los otros 12 temas; del 17 al 20 mezclas y compruebas lo aprendido. Puedes repetir cualquier día: se marca como aprobado con al menos 80 % de aciertos.</p><Button className="mt-4" onClick={() => startDay(grammarC1Days.find((item) => !dayProgress[item.day]?.completedAt)?.day ?? 20)}>{completedDays === 0 ? "Empezar día 1" : `Continuar día ${grammarC1Days.find((item) => !dayProgress[item.day]?.completedAt)?.day ?? 20}`} <ArrowRight className="h-4 w-4" /></Button></div></div>
+          </section>
+          <section id="plan-20-dias" className="space-y-4" aria-label="Plan de Grammar C1 de 20 días">
+            <div className="flex flex-wrap items-end justify-between gap-2"><div><h2 className="flex items-center gap-2 text-2xl font-black"><CalendarDays className="h-6 w-6 text-[#8052aa]" /> Tu plan día por día</h2><p className="mt-1 text-sm text-muted-foreground">Lección, práctica y corrección inmediata. Repite los días difíciles sin perder el avance.</p></div><span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">{completedDays}/20 días aprobados</span></div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{grammarC1Days.map((item) => {
+              const result = dayProgress[item.day];
+              const passed = Boolean(result?.completedAt);
+              return <article key={item.day} className={cn("flex flex-col rounded-3xl border p-4 shadow-sm", passed ? "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/30" : "border-primary/10 bg-white dark:bg-card")}>
+                <div className="flex items-center justify-between"><span className="grid h-9 w-9 place-items-center rounded-xl bg-[#efe5ff] text-sm font-black text-[#7353ad] dark:bg-[#44345f] dark:text-[#e5d4ff]">{item.day}</span><span className={cn("rounded-full px-2 py-1 text-[11px] font-bold", passed ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100" : "bg-muted text-muted-foreground")}>{passed ? <span className="inline-flex items-center gap-1"><Check className="h-3 w-3" /> Aprobado</span> : item.kind === "lesson" ? "Lección" : item.kind === "review" ? "Repaso" : "Reto final"}</span></div>
+                <h3 className="mt-3 text-sm font-extrabold">Día {item.day}: {item.title}</h3><p className="mt-1 flex-1 text-xs leading-relaxed text-muted-foreground">{item.focus}</p><p className="mt-3 text-[11px] font-semibold text-muted-foreground">{item.refs.length} preguntas{result ? ` · mejor ${result.bestCorrect}/${result.total}` : ""}</p><Button className="mt-2 w-full" variant={passed ? "outline" : "default"} onClick={() => startDay(item.day)}>{passed ? "Repasar" : result ? "Reintentar" : "Empezar"}<ArrowRight className="h-4 w-4" /></Button>
+              </article>;
+            })}</div>
           </section>
           <div className="flex flex-wrap items-end justify-between gap-2"><div><h2 className="text-2xl font-black">Tu mapa de temas C1</h2><p className="mt-1 text-sm text-muted-foreground">Cada tarjeta tiene una mini lección y ejercicios de una sola palabra.</p></div><span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">{grammarC1Topics.length} temas · {totalQuestions} preguntas</span></div>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">{grammarC1Topics.map((item, index) => {

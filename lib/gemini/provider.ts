@@ -4,7 +4,7 @@ import { GoogleGenAI } from "@google/genai";
  * Stable multimodal models for rubric-based text and audio grading.
  * The second model keeps grading available when the primary model is overloaded.
  */
-export const GRADING_MODELS = ["gemini-3.7-flash", "gemini-3.5-flash-lite"] as const;
+export const GRADING_MODELS = ["gemini-3.8-flash", "gemini-3.5-flash-lite"] as const;
 
 let client: GoogleGenAI | null = null;
 

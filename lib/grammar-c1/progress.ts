@@ -9,10 +9,19 @@ export interface TopicProgress {
   rounds: number;
 }
 
+export interface DayProgress {
+  attempts: number;
+  bestCorrect: number;
+  total: number;
+  completedAt?: string;
+}
+
 interface GrammarProgressState {
   byProfile: Record<string, Record<string, TopicProgress>>;
+  daysByProfile: Record<string, Record<number, DayProgress>>;
   startRound: (profileKey: string, topicId: string) => number;
   recordAnswer: (profileKey: string, topicId: string, questionId: string, correct: boolean) => void;
+  recordDayResult: (profileKey: string, day: number, correct: number, total: number) => void;
 }
 
 const emptyProgress = (): TopicProgress => ({ completedIds: [], attempts: 0, rounds: 0 });
@@ -21,6 +30,7 @@ export const useGrammarProgressStore = create<GrammarProgressState>()(
   persist(
     (set, get) => ({
       byProfile: {},
+      daysByProfile: {},
       startRound: (profileKey, topicId) => {
         const current = get().byProfile[profileKey]?.[topicId] ?? emptyProgress();
         set((state) => ({
@@ -54,13 +64,37 @@ export const useGrammarProgressStore = create<GrammarProgressState>()(
           };
         });
       },
+      recordDayResult: (profileKey, day, correct, total) => {
+        set((state) => {
+          const existing = state.daysByProfile[profileKey]?.[day];
+          const passed = correct >= Math.ceil(total * 0.8);
+          return {
+            daysByProfile: {
+              ...state.daysByProfile,
+              [profileKey]: {
+                ...state.daysByProfile[profileKey],
+                [day]: {
+                  attempts: (existing?.attempts ?? 0) + 1,
+                  bestCorrect: Math.max(existing?.bestCorrect ?? 0, correct),
+                  total,
+                  completedAt: existing?.completedAt ?? (passed ? new Date().toISOString() : undefined),
+                },
+              },
+            },
+          };
+        });
+      },
     }),
     {
       name: "itep-simulator:grammar-c1-progress",
-      version: 1,
+      version: 2,
+      migrate: (persisted) => {
+        const old = persisted as Partial<GrammarProgressState>;
+        return { ...old, daysByProfile: old.daysByProfile ?? {} } as GrammarProgressState;
+      },
       storage: createJSONStorage(() => localStorage),
       skipHydration: true,
-      partialize: (state) => ({ byProfile: state.byProfile }),
+      partialize: (state) => ({ byProfile: state.byProfile, daysByProfile: state.daysByProfile }),
     }
   )
 );

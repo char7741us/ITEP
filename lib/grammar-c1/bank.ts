@@ -49,6 +49,7 @@ export const grammarC1Topics: GrammarC1Topic[] = [
       q("The criteria for [[A:admission]] [[B:was]] revised after the [[C:faculty]] [[D:meeting]].", "B", "were", "Criteria es el plural de criterion; se necesita were."),
       q("The evidence [[A:collected]] during the [[B:trials]] [[C:are]] still under [[D:review]].", "C", "is", "Evidence es incontable y singular; trials no es el sujeto."),
       q("The proposal, as well as two [[A:alternatives]], [[B:require]] additional [[C:financial]] [[D:support]].", "B", "requires", "As well as no convierte en plural el sujeto proposal."),
+      q("The [[A:series]] of experiments [[B:have]] revealed a [[C:consistent]] [[D:pattern]].", "B", "has", "Series es el núcleo singular de este sujeto; experiments no controla el verbo."),
     ],
   },
   {
@@ -64,6 +65,7 @@ export const grammarC1Topics: GrammarC1Topic[] = [
       q("At this time next month, the team will be [[A:present]] its findings at a [[B:major]] [[C:conference]] in [[D:London]].", "A", "presenting", "Will be + -ing expresa una acción en curso en un momento futuro."),
       q("The archive had [[A:close]] before the [[B:students]] [[C:arrived]] for their [[D:appointment]].", "A", "closed", "Had exige participio pasado: had closed."),
       q("By 2030, scientists will have [[A:develop]] more [[B:efficient]] methods for [[C:storing]] [[D:energy]].", "A", "developed", "Future perfect: will have + participio pasado."),
+      q("By the time the review [[A:ended]], the panel had [[B:reach]] a [[C:firm]] [[D:decision]].", "B", "reached", "Después de had se usa el participio pasado: reached."),
     ],
   },
   {
@@ -79,6 +81,7 @@ export const grammarC1Topics: GrammarC1Topic[] = [
       q("If she [[A:had]] more time, she [[B:would]] [[C:revises]] the [[D:proposal]].", "C", "revise", "Después de would se usa verbo base: revise."),
       q("Had they [[A:responded]] sooner, the outcome [[B:will]] have [[C:been]] more [[D:favorable]].", "B", "would", "Had they responded es una condición irreal pasada; el resultado pide would have."),
       q("Unless the authors [[A:submits]] the final draft, the journal [[B:cannot]] [[C:begin]] its [[D:review]].", "A", "submit", "Authors es plural; en esta condición con unless se usa present simple: submit."),
+      q("If the team [[A:had]] known the deadline, it [[B:would]] have [[C:submit]] the [[D:report]].", "C", "submitted", "En el tercer condicional, would have exige participio pasado."),
     ],
   },
   {
@@ -94,6 +97,7 @@ export const grammarC1Topics: GrammarC1Topic[] = [
       q("Never [[A:had]] she [[B:encounter]] such a [[C:complex]] [[D:case]].", "B", "encountered", "Con had, el verbo principal va en participio: encountered."),
       q("Hardly [[A:had]] the lecture [[B:begun]] [[C:than]] the alarm [[D:sounded]].", "C", "when", "La pareja fija es hardly…when."),
       q("No sooner [[A:had]] the review [[B:started]] [[C:when]] a new [[D:issue]] emerged.", "C", "than", "La pareja fija es no sooner…than."),
+      q("Seldom [[A:do]] the director [[B:accept]] such [[C:risky]] [[D:proposals]].", "A", "does", "El auxiliar invertido sigue concordando con director, sujeto singular."),
     ],
   },
   {
@@ -109,6 +113,7 @@ export const grammarC1Topics: GrammarC1Topic[] = [
       q("The panel insisted that he [[A:attends]] the [[B:hearing]] in [[C:person]] next [[D:week]].", "A", "attend", "Insisted that exige forma base: attend."),
       q("The board requested that the proposal [[A:be]] [[B:revises]] before final [[C:approval]] is [[D:granted]].", "B", "revised", "El subjuntivo pasivo es be + participio: be revised."),
       q("The panel requested that the findings [[A:be]] [[B:report]] in a more [[C:accessible]] [[D:format]].", "B", "reported", "El pasivo formal pide be + participio: be reported."),
+      q("It is vital that the document [[A:be]] [[B:sign]] before the [[C:official]] [[D:deadline]].", "B", "signed", "El subjuntivo pasivo es be + participio: be signed."),
     ],
   },
   {
@@ -124,6 +129,7 @@ export const grammarC1Topics: GrammarC1Topic[] = [
       q("The researchers [[A:who]] findings were [[B:cited]] thanked the [[C:committee]] for its [[D:support]].", "A", "whose", "El pronombre expresa posesión de findings: whose."),
       q("The laboratory [[A:which]] the samples were [[B:stored]] [[C:was]] recently [[D:renovated]].", "A", "where", "El laboratorio es el lugar donde se guardaron las muestras: where."),
       q("The candidate [[A:whom]] submitted the [[B:proposal]] also [[C:led]] the [[D:discussion]].", "A", "who", "Aquí el pronombre es sujeto de submitted: who."),
+      q("The analyst [[A:whose]] published the [[B:study]] won an [[C:international]] [[D:award]].", "A", "who", "El pronombre es sujeto de published; whose expresaría posesión."),
     ],
   },
   {
@@ -139,6 +145,7 @@ export const grammarC1Topics: GrammarC1Topic[] = [
       q("The researchers selected [[A:an]] [[B:university]] in a [[C:rural]] [[D:area]].", "A", "a", "University empieza con sonido /juː/, consonántico: a university."),
       q("Every [[A:participants]] [[B:received]] the [[C:same]] written [[D:instructions]].", "A", "participant", "Every va seguido de sustantivo contable singular."),
       q("The team had [[A:few]] [[B:information]] about the [[C:earlier]] [[D:trial]].", "A", "little", "Information es incontable; se usa little information."),
+      q("The team collected [[A:an]] [[B:useful]] [[C:example]] for the [[D:lesson]].", "A", "a", "Useful empieza con sonido /juː/, por eso se dice a useful example."),
     ],
   },
   {
@@ -154,6 +161,7 @@ export const grammarC1Topics: GrammarC1Topic[] = [
       q("Her explanation was [[A:clear]], [[B:concise]], and [[C:logic]] in its [[D:structure]].", "C", "logical", "La serie contiene adjetivos: clear, concise, and logical."),
       q("The device operated [[A:efficient]] during the [[B:extended]] [[C:field]] [[D:trial]].", "A", "efficiently", "Operated es verbo; necesita efficiently."),
       q("The author not only [[A:collected]] data but also [[B:analyzing]] the [[C:results]] [[D:carefully]].", "B", "analyzed", "Not only...but also une formas paralelas: collected y analyzed."),
+      q("The results were [[A:remarkable]] [[B:consistent]], and the [[C:analysis]] was [[D:thorough]].", "A", "remarkably", "Consistent es adjetivo; para intensificarlo se necesita el adverbio remarkably."),
     ],
   },
   {
@@ -169,6 +177,7 @@ export const grammarC1Topics: GrammarC1Topic[] = [
       q("The second survey was as [[A:reliable]] [[B:than]] the [[C:first]] [[D:survey]].", "B", "as", "La estructura de igualdad es as reliable as."),
       q("The committee considered the newer model [[A:better]] [[B:then]] the [[C:older]] [[D:version]].", "B", "than", "La comparación requiere than, no then."),
       q("The newer method is [[A:most]] [[B:efficient]] than the [[C:earlier]] [[D:design]].", "A", "more", "Than exige comparativo: more efficient, no most efficient."),
+      q("This sample is [[A:larger]] [[B:that]] the [[C:earlier]] [[D:sample]].", "B", "than", "El comparativo larger va seguido de than."),
     ],
   },
   {
@@ -184,6 +193,7 @@ export const grammarC1Topics: GrammarC1Topic[] = [
       q("The lecture was so [[A:interested]] that the [[B:audience]] [[C:stayed]] for [[D:questions]].", "A", "interesting", "La charla causa interés, por eso es interesting; el público está interested."),
       q("A revised version will [[A:be]] [[B:release]] after the [[C:final]] [[D:review]].", "B", "released", "Will be necesita participio para la pasiva: released."),
       q("The participants were [[A:surprising]] by the [[B:unexpected]] [[C:change]] in [[D:schedule]].", "A", "surprised", "Las personas sienten la sorpresa: were surprised."),
+      q("The data were [[A:collecting]] during the [[B:summer]] field [[C:study]] [[D:abroad]].", "A", "collected", "Were + participio expresa la voz pasiva: were collected."),
     ],
   },
   {
@@ -199,6 +209,7 @@ export const grammarC1Topics: GrammarC1Topic[] = [
       q("The supervisor made the interns [[A:checks]] every [[B:figure]] [[C:very]] [[D:carefully]].", "A", "check", "Después de make + objeto va el verbo base: made the interns check."),
       q("She suggested [[A:review]] the [[B:notes]] before the [[C:next]] [[D:session]].", "A", "reviewing", "Suggest + -ing: suggested reviewing."),
       q("The analyst considered [[A:change]] the [[B:criteria]] after the [[C:pilot]] [[D:study]].", "A", "changing", "Consider + -ing: considered changing."),
+      q("The panel recommended [[A:postpone]] the [[B:meeting]] until [[C:next]] [[D:week]].", "A", "postponing", "Recommend va seguido de -ing si no hay objeto personal: recommended postponing."),
     ],
   },
   {
@@ -214,6 +225,7 @@ export const grammarC1Topics: GrammarC1Topic[] = [
       q("The data were [[A:consistent]] [[B:to]] the [[C:earlier]] [[D:results]].", "B", "with", "La colocación es consistent with."),
       q("They [[A:participated]] [[B:on]] the [[C:international]] [[D:workshop]].", "B", "in", "La colocación es participate in."),
       q("The delay occurred [[A:because]] [[B:to]] the [[C:heavy]] [[D:rain]].", "B", "of", "Because of va seguido de un grupo nominal: because of the heavy rain."),
+      q("The new policy is similar [[A:with]] the [[B:older]] [[C:regional]] [[D:policy]].", "A", "to", "La colocación correcta es similar to."),
     ],
   },
   {
@@ -229,6 +241,7 @@ export const grammarC1Topics: GrammarC1Topic[] = [
       q("He asked [[A:whether]] the [[B:committee]] [[C:approve]] the [[D:proposal]] yesterday.", "C", "approved", "Yesterday sitúa la aprobación en el pasado: approved."),
       q("The adviser [[A:said]] us to [[B:revise]] the [[C:abstract]] [[D:carefully]].", "A", "told", "Tell + persona + to; said us to es incorrecto."),
       q("The researcher explained that she [[A:is]] [[B:working]] on the [[C:project]] the [[D:previous]] year.", "A", "was", "The previous year sitúa el trabajo en el pasado respecto a explained."),
+      q("The instructor [[A:said]] the students that the [[B:exam]] [[C:was]] [[D:difficult]].", "A", "told", "Tell + destinatario + that; said no toma el objeto the students de esta forma."),
     ],
   },
 ];
