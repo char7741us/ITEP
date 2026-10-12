@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { href: "/", label: "Mi espacio" },
   { href: "/exam/new", label: "Nuevo simulacro" },
   { href: "/practica-diaria", label: "Práctica diaria" },
+  { href: "/laboratorio-c1", label: "Laboratorio C1" },
   { href: "/dashboard", label: "Progreso" },
   { href: "/cuaderno-errores", label: "Cuaderno de Errores" },
 ];

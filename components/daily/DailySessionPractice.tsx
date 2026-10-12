@@ -17,16 +17,17 @@ import { CoachHelpButton } from "@/components/learning/CoachHelpButton";
 import { StudyStatus } from "@/components/learning/StudyStatus";
 import { PracticeMoment } from "@/components/learning/PracticeMoment";
 import { requestGrade } from "@/lib/exam/grade-request";
+import { AccentListeningPlayer } from "./AccentListeningPlayer";
 
 type Question = DailySession["grammar"][number];
 
 function words(text: string): number { return text.trim() ? text.trim().split(/\s+/).length : 0; }
 
-function QuestionBlock({ item, id, selected, onAnswer, referenceText }: { item: Question; id: string; selected?: number; onAnswer: (id: string, index: number) => void; referenceText?: string }) {
+export function QuestionBlock({ item, id, selected, onAnswer, referenceText }: { item: Question; id: string; selected?: number; onAnswer: (id: string, index: number) => void; referenceText?: string }) {
   const answered = selected !== undefined;
   return (
     <div className="space-y-2 rounded-lg border p-4">
-      <p className="font-medium">{item.prompt}</p>
+      <p className="font-medium">{item.prompt.includes("[A]") ? item.prompt.split(/(\[[ABCD]\][A-Za-z-]+)/g).map((part, i) => /^\[[ABCD]\]/.test(part) ? <span key={i} className="mx-0.5 rounded bg-primary/5 px-1 underline decoration-primary decoration-2 underline-offset-4"><sup className="mr-1 text-[10px]">{part.slice(1, 2)}</sup>{part.slice(3)}</span> : part) : item.prompt}</p>
       <div className="grid gap-2 sm:grid-cols-2">
         {item.choices.map((choice, index) => (
           <button key={`${id}-${index}`} type="button" disabled={answered} onClick={() => onAnswer(id, index)}
@@ -41,7 +42,7 @@ function QuestionBlock({ item, id, selected, onAnswer, referenceText }: { item: 
   );
 }
 
-function GradeResult({ grade: result, skill, question }: { grade?: RubricResult; skill: string; question: string }) {
+export function GradeResult({ grade: result, skill, question }: { grade?: RubricResult; skill: string; question: string }) {
   if (!result) return null;
   return <div className="rounded-lg border bg-muted/40 p-3 text-sm"><p className="font-medium">Evaluación orientativa: {result.score.toFixed(1)}/6 · {result.cefrBand}</p><p>{result.rationale}</p>{result.improvements?.length > 0 && <p className="mt-1">Para mejorar: {result.improvements.join("; ")}</p>}<CoachHelpButton skill={skill} question={question} explanation={`${result.rationale}\n${result.improvements.join("; ")}`} /></div>;
 }
@@ -219,7 +220,7 @@ function DailySessionContent({ session }: { session: DailySession }) {
       <Card><CardHeader><CardTitle>Grammar</CardTitle><CardDescription>Responde tres preguntas de gramática. Cada respuesta se guarda automáticamente.</CardDescription></CardHeader><CardContent className="space-y-3">{session.grammar.map((item, i) => <QuestionBlock key={i} item={item} id={`grammar-${i}`} selected={answers[`grammar-${i}`]} onAnswer={answer} />)}</CardContent></Card>
       {session.grammar.every((_, index) => answers[`grammar-${index}`] !== undefined) && <PracticeMoment question={session.grammar[2].prompt} explanation={session.grammar[2].explanation} />}
 <Card><CardHeader><CardTitle>Reading</CardTitle><CardDescription>Lee el texto y responde las tres preguntas.</CardDescription></CardHeader><CardContent className="space-y-4"><article className="whitespace-pre-line rounded-lg bg-muted/40 p-4 leading-relaxed"><h3 className="mb-2 font-semibold">{session.reading.title}</h3>{session.reading.passage}</article>{session.reading.questions.map((item, i) => <QuestionBlock key={i} item={item} id={`reading-${i}`} selected={answers[`reading-${i}`]} onAnswer={answer} referenceText={session.reading.passage} />)}</CardContent></Card>
-<Card><CardHeader><CardTitle>Listening</CardTitle><CardDescription>Escucha el diálogo antes de responder. Puedes repetirlo para estudiar.</CardDescription></CardHeader><CardContent className="space-y-4"><audio controls preload="none" src={session.listening.audioAssetPath} className="w-full" aria-label={`Diálogo del día ${session.day}`}><a href={session.listening.audioAssetPath}>Descargar audio</a></audio>{session.listening.questions.map((item, i) => <QuestionBlock key={i} item={item} id={`listening-${i}`} selected={answers[`listening-${i}`]} onAnswer={answer} referenceText={session.listening.lines.map((line) => `${line.speaker}: ${line.text}`).join("\n")} />)}<Button variant="outline" onClick={() => setShowTranscript((value) => !value)}>{showTranscript ? "Ocultar" : "Ver"} transcripción</Button>{showTranscript && <div className="space-y-2 rounded-lg bg-muted/40 p-4 text-sm">{session.listening.lines.map((line, i) => <p key={i}><strong>{line.speaker}:</strong> {line.text}</p>)}</div>}</CardContent></Card>
+<Card><CardHeader><CardTitle>Listening</CardTitle><CardDescription>Escucha el diálogo antes de responder. Puedes repetirlo para estudiar.</CardDescription></CardHeader><CardContent className="space-y-4"><AccentListeningPlayer source="daily" id={String(session.day)} day={session.day} original={session.listening.audioAssetPath} />{session.listening.questions.map((item, i) => <QuestionBlock key={i} item={item} id={`listening-${i}`} selected={answers[`listening-${i}`]} onAnswer={answer} referenceText={session.listening.lines.map((line) => `${line.speaker}: ${line.text}`).join("\n")} />)}<Button variant="outline" onClick={() => setShowTranscript((value) => !value)}>{showTranscript ? "Ocultar" : "Ver"} transcripción</Button>{showTranscript && <div className="space-y-2 rounded-lg bg-muted/40 p-4 text-sm">{session.listening.lines.map((line, i) => <p key={i}><strong>{line.speaker}:</strong> {line.text}</p>)}</div>}</CardContent></Card>
       <Card><CardHeader><CardTitle>Writing · Tarea {session.writing.taskNumber}</CardTitle><CardDescription>{session.writing.minWords}–{session.writing.maxWords} palabras. Tu borrador se guarda en este navegador.</CardDescription></CardHeader><CardContent className="space-y-3"><p>{session.writing.prompt}</p><textarea aria-label="Tu respuesta escrita" maxLength={20000} className="min-h-52 w-full rounded-lg border bg-background p-3" value={writingText} disabled={Boolean(progress?.completedAt) || busy === "writing"} onChange={(event) => store.getState().setWriting(key, event.target.value)} /><p className={`text-sm ${writingWords >= session.writing.minWords && writingWords <= session.writing.maxWords ? "text-green-700" : "text-muted-foreground"}`}>{writingWords} palabras</p><p className="text-[11px] text-muted-foreground">Al evaluar, tu texto y la consigna se envían a Gemini de Google. No incluyas datos sensibles. La nota es orientativa.</p><Button variant="outline" disabled={!writingText.trim() || busy !== null || aiAvailable !== true} onClick={evaluateWriting}>{busy === "writing" ? "Evaluando…" : "Evaluación orientativa con IA"}</Button><GradeResult grade={progress?.writingGrade} skill="Writing" question={session.writing.prompt} /></CardContent></Card>
       <Card>
         <CardHeader><CardTitle>Speaking · Tarea {session.speaking.taskNumber}</CardTitle><CardDescription>{session.speaking.prepSeconds} segundos para preparar y {session.speaking.responseSeconds} segundos recomendados para responder.</CardDescription></CardHeader>

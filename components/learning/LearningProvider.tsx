@@ -71,6 +71,8 @@ export function LearningProvider({ children }: { children: React.ReactNode }) {
         for (const [key, day] of Object.entries(
           useDailyProgressStore.getState().days,
         )) {
+          // Lab records share the backup-safe store, not the historical 60-day namespace.
+          if (!/^[a-z0-9-]+:(?:[1-9]|[1-5]\d|60)$/.test(key)) continue;
           if (!day.completedAt) continue;
           const separator = key.lastIndexOf(":");
           const username = key.slice(0, separator);

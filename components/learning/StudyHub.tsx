@@ -102,6 +102,7 @@ export function StudyHub() {
               <ArrowRight size={16} />
             </Link>
             <Link href="/reto-diario" className="mt-3 block text-xs font-semibold underline underline-offset-4">Solo tengo 3 minutos: mi reto Grammar →</Link>
+            <Link href="/laboratorio-c1" className="mt-3 block text-xs font-semibold underline underline-offset-4">Me cuesta usar los tiempos al hablar: mi Laboratorio C1 →</Link>
           </div>
           <div className="relative mt-6 flex items-start gap-3">
             <span

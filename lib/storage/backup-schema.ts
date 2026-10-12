@@ -22,7 +22,7 @@ export const backupAttemptSchema = z.object({
   responses: z.object({ grammar: z.array(mcq).max(100), reading: z.array(mcq).max(100), listening: z.array(mcq).max(100), writing: z.array(z.object({ taskNumber, text, wordCount: counter, grading: rubricResultSchema.optional() })).max(2), speaking: z.array(z.object({ taskNumber, audioBlobKey: z.string().max(500), transcript: text.optional(), grading: rubricResultSchema.optional() })).max(2) }),
   scores: scores.optional(), gradingErrors: z.array(text).max(20).optional(),
 });
-const dailyDay = z.object({ answers: keyed(z.number().int().min(0).max(3)), writingText: text, writingGrade: rubricResultSchema.optional(), speakingAudioKey: id.optional(), speakingPracticed: z.boolean().optional(), speakingGrade: rubricResultSchema.optional(), completedAt: date.optional() });
+const dailyDay = z.object({ answers: keyed(z.number().int().min(0).max(3)), writingText: text, writingGrade: rubricResultSchema.optional(), speakingAudioKey: id.optional(), speakingPracticed: z.boolean().optional(), speakingGrade: rubricResultSchema.optional(), completedAt: date.optional(), structureRound: z.object({ form: z.union([z.literal(0), z.literal(1)]), assisted: z.boolean() }).optional() });
 const topic = z.object({ completedIds: strings, attempts: counter, rounds: counter });
 const day = z.object({ attempts: counter, bestCorrect: counter, total: counter, completedAt: date.optional() });
 const profile = z.object({ username, name: z.string().min(1).max(100), createdAt: date });

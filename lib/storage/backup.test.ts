@@ -26,6 +26,14 @@ describe("copias portables del progreso", () => {
     badRecall.learning.profiles.guest = { ...emptyLearningProfile(), recalls: { "not-a-date": { questionId: "q1", prediction: "", confidence: "sure", selectedIndex: 0, reflection: "", answeredAt: badRecall.exportedAt } } };
     expect(studyBackupSchema.safeParse(badRecall).success).toBe(false);
   });
+  it("preserves structure rounds, repair notes and both productive takes", () => {
+    const backup = emptyBackup();
+    backup.daily.days["ana:lab:v1:present-past:structure:2026-10-12"] = { answers: { "grammar-0": 1 }, writingText: "My recall", structureRound: { form: 1, assisted: true }, completedAt: backup.exportedAt };
+    backup.daily.days["ana:lab:v1:present-past-speaking-1:take:1"] = { answers: {}, writingText: "", speakingAudioKey: "take-one" };
+    backup.daily.days["ana:lab:v1:present-past-speaking-1:take:2"] = { answers: {}, writingText: "", speakingAudioKey: "take-two" };
+    backup.daily.days["ana:lab:v1:present-past-speaking-1:plan"] = { answers: {}, writingText: "Original → correction → reason" };
+    expect(parseStudyBackup(JSON.stringify(backup))).toEqual(backup);
+  });
   it("does not overwrite answers, drafts or completed days already on this device", () => {
     const current = emptyBackup(), incoming = emptyBackup();
     current.daily.days["guest:1"] = { answers: { "grammar-0": 0 }, writingText: "My current draft" };

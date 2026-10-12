@@ -1,0 +1,55 @@
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ProductiveTrainer } from "./ProductiveTrainer";
+import { productiveTasks } from "@/lib/content/c1-lab/bank";
+import { labKey } from "@/lib/content/c1-lab/review";
+import { useDailyProgressStore } from "@/lib/content/daily/progress";
+const mocks = vi.hoisted(() => ({ profile: { username: "qa-ana", name: "Ana", createdAt: "2026-10-12T00:00:00.000Z" }, grade: vi.fn(), audio: vi.fn(), activity: vi.fn(), feedback: vi.fn(), timed: vi.fn() }));
+vi.mock("@/lib/storage/profileRepo", () => ({ useActiveProfile: () => mocks.profile }));
+vi.mock("./LearningProvider", () => ({ useLearningContext: () => ({ ready: true, now: new Date(2026, 9, 12) }) }));
+vi.mock("@/lib/exam/grade-request", () => ({ requestGrade: mocks.grade }));
+vi.mock("@/lib/storage/attemptsRepo", () => ({ getSpeakingAudio: mocks.audio, saveSpeakingAudio: vi.fn() }));
+vi.mock("@/lib/audio/recorder", () => ({ startTimedRecording: mocks.timed }));
+vi.mock("@/lib/learning/store", () => ({ recordLearningActivity: mocks.activity }));
+vi.mock("@/lib/notebook/store", () => ({ saveProductiveFeedback: mocks.feedback }));
+vi.mock("@/components/daily/DailySessionPractice", () => ({ GradeResult: () => null }));
+const task = productiveTasks.find((item) => item.skill === "writing" && item.taskNumber === 1)!;
+const text = Array.from({ length: 55 }, () => "word").join(" ");
+const grade = { score: 4.5, cefrBand: "C1", dimensionScores: { grammarAccuracy: 4.5 }, rationale: "A sample", strengths: [], improvements: [] };
+beforeEach(() => { localStorage.clear(); useDailyProgressStore.setState({ days: {} }); mocks.profile = { username: "qa-ana", name: "Ana", createdAt: "2026-10-12T00:00:00.000Z" }; vi.clearAllMocks(); });
+afterEach(cleanup);
+describe("producción y revisión por perfil", () => {
+  it("persists two drafts independently and refuses out-of-range evaluation", () => {
+    render(<ProductiveTrainer task={task} />);
+    fireEvent.change(screen.getByLabelText("Writing versión 1"), { target: { value: text } });
+    fireEvent.change(screen.getByLabelText("Writing versión 2"), { target: { value: "Too short" } });
+    expect((screen.getByRole("button", { name: "Evaluar versión 1" }) as HTMLButtonElement).disabled).toBe(false);
+    expect((screen.getByRole("button", { name: "Evaluar versión 2" }) as HTMLButtonElement).disabled).toBe(true);
+    const base = labKey("qa-ana", task.id);
+    expect(useDailyProgressStore.getState().days[`${base}:take:1`].writingText).toBe(text);
+    expect(useDailyProgressStore.getState().days[`${base}:take:2`].writingText).toBe("Too short");
+  });
+  it("does not save a late grade after switching students", async () => {
+    let resolve!: (value: unknown) => void;
+    mocks.grade.mockImplementation(() => new Promise((done) => { resolve = done; }));
+    const view = render(<ProductiveTrainer task={task} />);
+    fireEvent.change(screen.getByLabelText("Writing versión 1"), { target: { value: text } });
+    fireEvent.click(screen.getByRole("button", { name: "Evaluar versión 1" }));
+    await waitFor(() => expect(mocks.grade).toHaveBeenCalledTimes(1));
+    mocks.profile = { ...mocks.profile, username: "qa-luis", name: "Luis" };
+    view.rerender(<ProductiveTrainer task={task} />);
+    await act(async () => { resolve(grade); });
+    expect(useDailyProgressStore.getState().days[`${labKey("qa-ana", task.id)}:take:1`].writingGrade).toBeUndefined();
+    expect(useDailyProgressStore.getState().days[`${labKey("qa-luis", task.id)}:take:1`]).toBeUndefined();
+    expect(mocks.feedback).not.toHaveBeenCalled();
+  });
+  it("shows a recoverable microphone failure and releases the recording lock", async () => {
+    const speaking = productiveTasks.find((item) => item.skill === "speaking")!;
+    mocks.timed.mockRejectedValue(new Error("Permission denied"));
+    render(<ProductiveTrainer task={speaking} />);
+    fireEvent.click(screen.getByRole("button", { name: "Grabar toma 1" }));
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("micrófono"));
+    expect((screen.getByRole("button", { name: "Grabar toma 1" }) as HTMLButtonElement).disabled).toBe(false);
+    expect((screen.getByRole("button", { name: "Grabar toma 2" }) as HTMLButtonElement).disabled).toBe(false);
+  });
+});

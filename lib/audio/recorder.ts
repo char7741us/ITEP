@@ -5,6 +5,20 @@ export interface RecordingHandle {
   cancel: () => void;
 }
 
+/** Timing starts only after microphone permission succeeds. Cancel/stop clears every timer. */
+export async function startTimedRecording(
+  seconds: number,
+  onElapsed: (seconds: number) => void,
+  onLimit: () => void,
+): Promise<RecordingHandle> {
+  const handle = await startRecording();
+  const startedAt = performance.now();
+  const ticker = setInterval(() => onElapsed(Math.min(seconds, Math.floor((performance.now() - startedAt) / 1000))), 250);
+  const limit = setTimeout(onLimit, seconds * 1000);
+  const clear = () => { clearInterval(ticker); clearTimeout(limit); };
+  return { stop: () => { clear(); return handle.stop(); }, cancel: () => { clear(); handle.cancel(); } };
+}
+
 export async function startRecording(): Promise<RecordingHandle> {
   const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
   let recorder: MediaRecorder;

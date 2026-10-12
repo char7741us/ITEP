@@ -138,6 +138,7 @@ export default function GrammarC1Page() {
           <div>
             <p className="mb-2 inline-flex items-center gap-2 rounded-full bg-white/75 px-3 py-1 text-xs font-extrabold uppercase tracking-wider text-primary dark:bg-white/10"><Sparkles className="h-3.5 w-3.5" /> Tu laboratorio de Grammar C1</p>
             <h1 className="text-3xl font-black leading-tight sm:text-5xl">Ruta Grammar C1 · 20 días 🕵️‍♀️</h1>
+            <Link href="/laboratorio-c1" className="mt-3 inline-block text-sm font-semibold underline">Refuerzo de tiempos, producción oral y repasos espaciados →</Link>
             <p className="mt-3 max-w-2xl text-sm leading-relaxed text-foreground/80 sm:text-base">Un día, una meta: recorre los 13 temas esenciales con los dos formatos de Grammar de iTEP. Completa oraciones, detecta errores y entiende cada corrección.</p>
           </div>
           <div className="rounded-3xl bg-white/80 p-5 text-center shadow-sm dark:bg-white/10" aria-label="Progreso de Grammar C1">

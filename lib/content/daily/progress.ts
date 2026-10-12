@@ -13,6 +13,7 @@ export interface DailyProgress {
   speakingPracticed?: boolean;
   speakingGrade?: RubricResult;
   completedAt?: string;
+  structureRound?: { form: 0 | 1; assisted: boolean };
 }
 
 interface DailyProgressState {
@@ -24,6 +25,8 @@ interface DailyProgressState {
   markSpeakingPracticed: (key: string) => void;
   setSpeakingGrade: (key: string, grade: RubricResult) => void;
   complete: (key: string) => void;
+  prepareStructure: (key: string, form: 0 | 1) => void;
+  revealStructure: (key: string) => void;
 }
 
 const empty: DailyProgress = { answers: {}, writingText: "" };
@@ -36,6 +39,15 @@ export const useDailyProgressStore = create<DailyProgressState>()(
   persist(
     (set) => ({
       days: {},
+      prepareStructure: (key, form) => set((state) => {
+        if (state.days[key]?.structureRound) return state;
+        return { days: { ...state.days, [key]: { ...(state.days[key] ?? empty), structureRound: { form, assisted: false } } } };
+      }),
+      revealStructure: (key) => set((state) => {
+        const current = state.days[key];
+        if (!current?.structureRound || current.completedAt) return state;
+        return { days: { ...state.days, [key]: { ...current, structureRound: { ...current.structureRound, assisted: true } } } };
+      }),
       answer: (key, questionId, choice) => set((state) => {
         const current = state.days[key] ?? empty;
         if (current.answers[questionId] !== undefined || current.completedAt) return state;

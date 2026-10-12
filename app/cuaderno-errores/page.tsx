@@ -238,6 +238,7 @@ export default function ErrorNotebookPage() {
               <Sparkles className="h-3.5 w-3.5" /> Tu rincón de crecimiento
             </div>
             <h1 className="text-3xl font-extrabold leading-tight sm:text-5xl">Cada error es una semilla 🌱</h1>
+            <Link href="/laboratorio-c1" className="mt-3 inline-block text-sm font-semibold underline">¿La regla se te olvida al hablar? Prueba el taller de estructuras y dos tomas →</Link>
             <p className="mt-3 max-w-lg text-sm leading-relaxed text-foreground/80 sm:text-base">
               Aquí no vienes a recordar lo que salió mal. Vienes a descubrir la pista, practicar a tu ritmo y celebrar cada avance.
             </p>
