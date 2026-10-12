@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Bricolage_Grotesque, Instrument_Serif, JetBrains_Mono } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Header } from "@/components/common/Header";
+import { SystemNotice } from "@/components/common/SystemNotice";
 import { LearningProvider } from "@/components/learning/LearningProvider";
 import { LearningOverlay } from "@/components/learning/LearningOverlay";
 import "./globals.css";
@@ -24,8 +25,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "iTEP Simulator — Simulacro de examen",
-  description: "Simulacro de práctica del examen iTEP Academic-Plus con temporizador, análisis de resultados y seguimiento de progreso.",
+  title: "iTEP Simulator — Tu ruta de práctica",
+  description: "Prepara tu inglés académico con una ruta personal, práctica de cinco habilidades, coach de estudio y simulacros. Herramienta independiente, no un examen oficial.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -37,8 +38,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <TooltipProvider>
           <LearningProvider>
+            <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:rounded-lg focus:bg-background focus:p-3">Saltar al contenido</a>
+            <SystemNotice />
             <Header />
-            <main className="flex flex-1 flex-col">{children}</main>
+            <main id="main-content" tabIndex={-1} className="flex flex-1 flex-col">{children}</main>
             <LearningOverlay />
           </LearningProvider>
         </TooltipProvider>

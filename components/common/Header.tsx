@@ -27,6 +27,7 @@ export function Header() {
           </span>
         </Link>
         <div className="ml-auto">
+          <Link href="/mis-datos" className="mr-2 inline-block rounded-full px-2 py-2 text-xs text-muted-foreground hover:bg-muted">Mis datos</Link>
           <ProfileControl />
         </div>
         <nav
@@ -37,6 +38,7 @@ export function Header() {
             <Link
               key={item.href}
               href={item.href}
+              aria-current={pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`)) ? "page" : undefined}
               className={cn(
                 "shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted",
                 pathname === item.href

@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
+import { trackedStorage, reportStorageProblem } from "@/lib/storage/health";
 import type { RubricResult } from "@/lib/types/attempt";
 
 export interface DailyProgress {
@@ -70,7 +71,8 @@ export const useDailyProgressStore = create<DailyProgressState>()(
     {
       name: "itep-simulator:daily-progress",
       version: 1,
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => trackedStorage),
+      onRehydrateStorage: () => (_state, error) => { if (error) reportStorageProblem(); },
       skipHydration: true,
       partialize: (state) => ({ days: state.days }),
     }

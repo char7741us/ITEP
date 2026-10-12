@@ -97,13 +97,13 @@ export default function NewExamPage() {
         <AlertDescription>
           Las 5 secciones están activas. Los contenidos son originales, inspirados en la estructura oficial de iTEP;
           no son preguntas oficiales. Writing y Speaking reciben una evaluación orientativa con Gemini, sujeta a
-          disponibilidad del servicio.
+          disponibilidad del servicio. Al evaluar se envían tu texto, grabación y consignas a Google; evita datos sensibles. El uso de Gemini está previsto para mayores de 18 años. Tu progreso se guarda solo en este navegador.
         </AlertDescription>
       </Alert>
 
       <div className="rounded-2xl border border-primary/20 bg-primary/5 p-5">
         <p className="font-bold">🎯 Tu misión en este simulacro</p>
-        <p className="mt-1 text-sm text-muted-foreground">Lee y escucha buscando implicaciones, no solo datos; en Grammar identifica una sola palabra incorrecta; en Writing y Speaking sustenta tus ideas y reconoce sus límites.</p>
+        <p className="mt-1 text-sm text-muted-foreground">Lee y escucha buscando implicaciones, no solo datos; en Grammar completa oraciones y detecta una sola palabra incorrecta; en Writing y Speaking sustenta tus ideas y reconoce sus límites.</p>
         <p className="mt-2 text-xs text-muted-foreground">Al terminar verás una meta exigente por cada una de las cinco áreas y tus errores pasarán al Cuaderno para entrenarlos.</p>
       </div>
 

@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import type { UserProfile } from "@/lib/types/profile";
+import { reportStorageProblem } from "./health";
 
 const PROFILES_KEY = "itep-simulator:profiles";
 const ACTIVE_KEY = "itep-simulator:active-profile";
@@ -28,16 +29,19 @@ function readProfiles(): UserProfile[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = window.localStorage.getItem(PROFILES_KEY);
-    cachedProfiles = raw ? (JSON.parse(raw) as UserProfile[]) : [];
+    const parsed: unknown = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(parsed) || parsed.some((item) => !item || typeof item.name !== "string" || typeof item.username !== "string" || typeof item.createdAt !== "string")) throw new Error("Perfiles inválidos");
+    cachedProfiles = parsed as UserProfile[];
   } catch {
+    reportStorageProblem();
     cachedProfiles = [];
   }
   return cachedProfiles;
 }
 
 function writeProfiles(profiles: UserProfile[]) {
-  cachedProfiles = profiles;
   window.localStorage.setItem(PROFILES_KEY, JSON.stringify(profiles));
+  cachedProfiles = profiles;
   emit();
 }
 
@@ -59,7 +63,8 @@ export function getProfiles(): UserProfile[] {
 
 export function getActiveUsername(): string | null {
   if (typeof window === "undefined") return null;
-  return window.localStorage.getItem(ACTIVE_KEY);
+  try { return window.localStorage.getItem(ACTIVE_KEY) || null; }
+  catch { reportStorageProblem(); return null; }
 }
 
 export function getActiveProfile(): UserProfile | null {
@@ -71,7 +76,7 @@ export function getActiveProfile(): UserProfile | null {
 /** Creates a new profile or renames an existing one with the same username, then makes it active. */
 export function saveProfile(name: string, usernameInput: string): UserProfile {
   const username = slugifyUsername(usernameInput);
-  const trimmedName = name.trim() || username;
+  const trimmedName = name.trim().slice(0, 100) || username;
   const profiles = readProfiles();
   const index = profiles.findIndex((p) => p.username === username);
   const profile: UserProfile = {
@@ -86,8 +91,9 @@ export function saveProfile(name: string, usernameInput: string): UserProfile {
   return profile;
 }
 
-export function setActiveUsername(username: string): void {
-  window.localStorage.setItem(ACTIVE_KEY, username);
+export function setActiveUsername(username: string | null): void {
+  if (username === null) window.localStorage.removeItem(ACTIVE_KEY);
+  else window.localStorage.setItem(ACTIVE_KEY, username);
   emit();
 }
 

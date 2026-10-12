@@ -1,5 +1,6 @@
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 import type { AttemptRecord } from "@/lib/types/attempt";
+import { reportStorageProblem } from "./health";
 
 interface ItepDB extends DBSchema {
   attempts: {
@@ -33,7 +34,7 @@ export function getDb(): Promise<IDBPDatabase<ItepDB>> {
           db.createObjectStore("speakingAudioBlobs", { keyPath: "key" });
         }
       },
-    });
+    }).catch((error) => { dbPromise = null; reportStorageProblem(); throw error; });
   }
   return dbPromise;
 }

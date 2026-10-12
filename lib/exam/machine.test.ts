@@ -249,10 +249,7 @@ describe("examMachine", () => {
     expect(scores.grammar).toBe(6.0);
     expect(scores.writing).toBe(0);
     expect(scores.speaking).toBe(0);
-    expect(scores.overall).toBe(averageScoreOfPerfectObjectiveSections());
+    expect(scores.overall).toBe(6);
+    expect(actor.getSnapshot().context.gradingErrors).toHaveLength(4);
   });
 });
-
-function averageScoreOfPerfectObjectiveSections(): number {
-  return Math.round(((6 + 6 + 6 + 0 + 0) / 5) * 10) / 10;
-}

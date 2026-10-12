@@ -5,6 +5,7 @@ import type { AttemptRecord } from "@/lib/types/attempt";
 import { collectFailedTopics, comprehensionRule } from "./failedRules";
 import { getCoachGuide } from "./coach";
 import { getBankTwins } from "./twinsFallback";
+import { grammarC1Topics } from "@/lib/grammar-c1/bank";
 import { consecutiveStudyDays, localStudyDate, notebookProfileKey, useErrorNotebookStore } from "./store";
 
 beforeEach(() => {
@@ -130,6 +131,18 @@ describe("Cuaderno de Errores", () => {
     expect(twins).toHaveLength(3);
     expect(twins?.filter((question) => question.question.startsWith("Identify the ONE incorrect word"))).toHaveLength(2);
     expect(twins?.slice(0, 2).every((question) => question.options.every((option) => option.split(/\s+/).length === 1))).toBe(true);
+  });
+
+  it("offers a concrete lesson and three distinct follow-ups without repeating the failed C1 item", () => {
+    for (const topic of grammarC1Topics) for (const question of topic.questions) {
+      const rule = `${topic.title}: ${question.explanation}`;
+      const twins = getBankTwins("Grammar", rule);
+      expect(twins).toHaveLength(3);
+      expect(new Set(twins?.map((item) => item.question)).size).toBe(3);
+      expect(twins?.some((item) => item.explanation.startsWith(question.explanation))).toBe(false);
+      expect(getCoachGuide("Grammar", rule).title).not.toBe("Arma la frase como un rompecabezas");
+      expect(rule.length).toBeLessThanOrEqual(500);
+    }
   });
 
   it("includes distinct reading passages and listening scripts for comprehension practice", () => {

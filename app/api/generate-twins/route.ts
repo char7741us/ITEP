@@ -2,6 +2,9 @@ import { ApiError } from "@google/genai";
 import { z } from "zod";
 import { getGeminiClient, GRADING_MODELS } from "@/lib/gemini/provider";
 import { getBankTwins } from "@/lib/notebook/twinsFallback";
+import { limitAIRequest, readLimitedJSON, requestProblemResponse } from "@/lib/server/ai-request";
+
+export const maxDuration = 60;
 
 const requestSchema = z.object({
   failed_rule: z.string().trim().min(5).max(500),
@@ -48,10 +51,12 @@ const responseSchema = {
 export async function POST(request: Request) {
   let input: z.infer<typeof requestSchema>;
   try {
-    input = requestSchema.parse(await request.json());
-  } catch {
-    return Response.json({ error: "Indica un tema válido para generar ejercicios." }, { status: 400 });
+    input = requestSchema.parse(await readLimitedJSON(request));
+  } catch (error) {
+    return requestProblemResponse(error);
   }
+  const limited = limitAIRequest(request);
+  if (limited) return limited;
 
   const bankTwins = getBankTwins(input.section, input.failed_rule);
   if (!(process.env.GEMINI_API_KEY ?? "").trim()) {
@@ -78,6 +83,7 @@ La sección es ${input.section}. El objetivo es una práctica exigente de nivel 
             responseMimeType: "application/json",
             responseSchema,
             temperature: 0.7,
+            httpOptions: { timeout: 20000 },
           },
         });
         if (!response.text) throw new SyntaxError("Gemini devolvió una respuesta vacía.");
@@ -92,8 +98,7 @@ La sección es ${input.section}. El objetivo es una práctica exigente de nivel 
         if (!hasFallback || !retryable) throw error;
       }
     }
-  } catch (error) {
-    console.error("Error al generar ejercicios gemelos:", error);
+  } catch {
     if (bankTwins) return Response.json({ questions: bankTwins, source: "bank" });
     return Response.json({ error: "No se pudieron generar ejercicios ahora. Inténtalo de nuevo." }, { status: 502 });
   }

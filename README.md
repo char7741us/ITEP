@@ -11,11 +11,14 @@ Simulacro de práctica completo para el examen **iTEP Academic-Plus**, construid
 - **Niveles CEFR** automáticos (Below B2, B2, C1, C2)
 - **Dashboard de progreso** con gráficos de tendencia por habilidad
 - **Mi espacio de estudio**: misión personalizada, calendario mensual de actividad, racha real, meta diaria ajustable, ocho logros y destellos por esfuerzo; todo persistido localmente y separado por perfil
+- **Ruta personal semanal**: compromiso flexible de 2, 3 o 5 días, prioridad por habilidad y fecha de examen opcional; brújula de práctica que no confunde participación con nivel de inglés
+- **Reto de 3 minutos**: recuperación activa antes de ver opciones, confianza, explicación y reflexión guardada; rota los 13 temas de Grammar y lleva errores al Cuaderno sin duplicar puntos
+- **Mis datos**: exportación e importación local de progreso y grabaciones opcionales. La restauración añade registros faltantes sin reemplazar respuestas existentes; los archivos no están cifrados y deben mantenerse privados
 - **Compañero virtual Mochi**: ilustración animada, nombre y colores personalizables; niveles y accesorios desbloqueables sin perder avances por descansar; respeta movimiento reducido
 - **Coach de estudio** con Gemini: planes basados en resultados, reglas pendientes y feedback; explicaciones contextuales y microretos interactivos en el inicio y las áreas de práctica. Guía local cuando la IA no está disponible; oculto durante simulacros
 - **Pausas interactivas** entre ejercicios: el estudiante elige un reto, aclarar una duda o descansar. Enfoque de 5/10/15 minutos que acompaña la navegación, se pausa al salir de la pestaña y no concede puntos por dejar correr el reloj
 - **Cuaderno de Errores** local: agrupa temas fallados, ofrece mini lecciones ilustradas y retos de tres preguntas; registra días de estudio y logros por perfil. Tres aciertos consecutivos dominan un tema
-- **Grammar C1 en 20 días** dentro del Cuaderno: 13 temas, 125 preguntas originales de detección de una palabra incorrecta y completar oraciones, repasos mixtos y reto final con preguntas nuevas. El avance diario se guarda localmente por perfil; cada día se aprueba con al menos 85 % de aciertos
+- **Ruta Grammar C1 de 20 días** dentro del Cuaderno: 13 temas, 125 preguntas originales de detección de una palabra incorrecta y completar oraciones, repasos mixtos y reto final con preguntas nuevas. El avance diario se guarda localmente por perfil; cada día se aprueba con al menos 85 % de aciertos. No garantiza alcanzar C1 en ese plazo
 - **Reintento de calificación** en resultados: cuando Gemini falla, Writing y Speaking pueden calificarse posteriormente desde las respuestas ya guardadas sin repetir el simulacro
 - **6 simulacros completos nuevos** con lecturas, preguntas y audios distintos; los 2 bancos anteriores y sus 30 combinaciones permanecen disponibles para abrir resultados históricos, pero no se asignan a simulacros nuevos
 - **60 sesiones cortas de práctica** con Grammar, Reading, Listening, Writing y Speaking: 60 textos, 60 diálogos con audio de dos voces, 540 preguntas objetivas y 120 consignas de producción; avance local por perfil
@@ -25,7 +28,7 @@ Simulacro de práctica completo para el examen **iTEP Academic-Plus**, construid
 
 ## Requisitos
 
-- Node.js 18+ 
+- Node.js 20.9+ (verificado con Node.js 24.17)
 - npm, yarn o pnpm
 - API key de Google Gemini solo para la evaluación opcional de Writing/Speaking y la generación de preguntas nuevas del Cuaderno; las mini lecciones y los retos cubiertos por el banco de las 60 sesiones funcionan sin ella
 
@@ -53,7 +56,7 @@ cp .env.local.example .env.local
 GEMINI_API_KEY=tu_api_key_aqui
 ```
 
-Consíguela gratis en [Google AI Studio](https://aistudio.google.com/apikey).
+Gestiona tu clave en [Google AI Studio](https://aistudio.google.com/apikey). La disponibilidad, cuotas y tratamiento de datos dependen de tu proyecto y facturación. Revisa las [condiciones de Gemini](https://ai.google.dev/gemini-api/terms): esta integración está prevista para mayores de 18 años; no envíes datos sensibles. La clave permanece en el servidor, nunca en variables `NEXT_PUBLIC_*` ni en copias de progreso.
 
 ## Desarrollo
 
@@ -110,7 +113,7 @@ npm run render:mock-audio  # Reconstruye los 36 audios de los seis simulacros nu
 
 ## Tecnologías
 
-- **Framework**: Next.js 16.3.3 (App Router)
+- **Framework**: Next.js 16.4.0 (App Router)
 - **UI**: React 19 + TypeScript
 - **Estilos**: Tailwind CSS v4 + shadcn/ui
 - **State**: XState v5 (máquina de estados del examen)

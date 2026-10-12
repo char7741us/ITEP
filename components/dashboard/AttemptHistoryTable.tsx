@@ -3,6 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { CEFRBandBadge } from "@/components/results/CEFRBandBadge";
 import { EXAM_MODE_LABELS } from "@/lib/types/mode";
 import type { AttemptRecord } from "@/lib/types/attempt";
+import { isPartialAttempt } from "@/lib/exam/grade-status";
 
 export function AttemptHistoryTable({ attempts }: { attempts: AttemptRecord[] }) {
   const visible = attempts.filter((a) => a.status === "in_progress" || (a.status === "completed" && a.scores));
@@ -27,7 +28,7 @@ export function AttemptHistoryTable({ attempts }: { attempts: AttemptRecord[] })
           <TableRow key={attempt.id}>
             <TableCell>{new Date(attempt.startedAt).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" })}</TableCell>
             <TableCell>{EXAM_MODE_LABELS[attempt.mode]}</TableCell>
-            <TableCell className="tabular-nums">{attempt.scores ? `${attempt.scores.overall.toFixed(1)}${attempt.gradingErrors?.length ? " (parcial)" : ""}` : "En curso"}</TableCell>
+            <TableCell className="tabular-nums">{attempt.scores ? `${attempt.scores.overall.toFixed(1)}${isPartialAttempt(attempt) ? " (parcial)" : ""}` : "En curso"}</TableCell>
             <TableCell>
               {attempt.scores ? <CEFRBandBadge band={attempt.scores.overallBand} /> : "—"}
             </TableCell>

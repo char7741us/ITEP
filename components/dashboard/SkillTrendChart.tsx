@@ -2,6 +2,7 @@
 
 import { Line, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import type { AttemptRecord } from "@/lib/types/attempt";
+import { hasCompleteSkillGrade } from "@/lib/exam/grade-status";
 
 export function SkillTrendChart({ attempts }: { attempts: AttemptRecord[] }) {
   const completed = attempts
@@ -22,8 +23,8 @@ export function SkillTrendChart({ attempts }: { attempts: AttemptRecord[] }) {
     Reading: attempt.scores!.reading,
     Listening: attempt.scores!.listening,
     Grammar: attempt.scores!.grammar,
-    Writing: attempt.gradingErrors?.some((error) => error.startsWith("Writing")) ? null : attempt.scores!.writing,
-    Speaking: attempt.gradingErrors?.some((error) => error.startsWith("Speaking") || error.startsWith("Writing y Speaking:")) ? null : attempt.scores!.speaking,
+    Writing: hasCompleteSkillGrade(attempt, "writing") ? attempt.scores!.writing : null,
+    Speaking: hasCompleteSkillGrade(attempt, "speaking") ? attempt.scores!.speaking : null,
     General: attempt.scores!.overall,
   }));
 

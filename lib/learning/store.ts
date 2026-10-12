@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
+import { trackedStorage, reportStorageProblem } from "@/lib/storage/health";
 import {
   ACCESSORIES,
   dateKey,
@@ -14,6 +15,7 @@ import type {
   LearningProfile,
   PetAccessory,
   PetColor,
+  RecallRecord,
 } from "./model";
 
 export interface CoachContext {
@@ -30,13 +32,15 @@ interface LearningState {
   customize: (
     profileKey: string,
     settings: Partial<
-      Pick<LearningProfile, "petName" | "petColor" | "dailyGoal">
+      Pick<LearningProfile, "petName" | "petColor" | "dailyGoal" | "studyPlan">
     >,
   ) => void;
   wear: (profileKey: string, accessory: PetAccessory) => void;
   openCoach: (context?: CoachContext) => void;
   closeCoach: () => void;
   clearCelebration: () => void;
+  saveRecall: (profileKey: string, day: string, record: RecallRecord) => void;
+  reflectRecall: (profileKey: string, day: string, reflection: string) => void;
 }
 
 export const learningProfileKey = (username: string | null) =>
@@ -120,11 +124,23 @@ export const useLearningStore = create<LearningState>()(
         set({ coachOpen: true, coachContext: context ?? null }),
       closeCoach: () => set({ coachOpen: false, coachContext: null }),
       clearCelebration: () => set({ celebration: null }),
+      saveRecall: (profileKey, day, record) => set((state) => {
+        const profile = state.profiles[profileKey] ?? emptyLearningProfile();
+        if (profile.recalls?.[day]) return state;
+        return { profiles: { ...state.profiles, [profileKey]: { ...profile, recalls: { ...profile.recalls, [day]: { ...record, prediction: record.prediction.slice(0, 500), reflection: record.reflection.slice(0, 600) } } } } };
+      }),
+      reflectRecall: (profileKey, day, reflection) => set((state) => {
+        const profile = state.profiles[profileKey];
+        const record = profile?.recalls?.[day];
+        if (!record) return state;
+        return { profiles: { ...state.profiles, [profileKey]: { ...profile, recalls: { ...profile.recalls, [day]: { ...record, reflection: reflection.slice(0, 600) } } } } };
+      }),
     }),
     {
       name: "itep-simulator:learning-companion",
       version: 1,
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => trackedStorage),
+      onRehydrateStorage: () => (_state, error) => { if (error) reportStorageProblem(); },
       skipHydration: true,
       partialize: (state) => ({ profiles: state.profiles }),
     },

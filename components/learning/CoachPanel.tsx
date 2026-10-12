@@ -20,6 +20,8 @@ import {
   useLearningStore,
   type CoachContext,
 } from "@/lib/learning/store";
+import { questionFingerprint } from "@/lib/learning/journey";
+import { dateKey } from "@/lib/learning/model";
 
 type Message = {
   id: string;
@@ -31,10 +33,8 @@ type Message = {
 
 function MicroQuiz({
   quiz,
-  id,
 }: {
   quiz: NonNullable<CoachAnswer["quiz"]>;
-  id: string;
 }) {
   const { student } = useStudyOverview();
   const [selected, setSelected] = useState<number | null>(null);
@@ -55,7 +55,7 @@ function MicroQuiz({
               answered.current = true;
               setSelected(index);
               void recordLearningActivity(student?.username ?? null, {
-                id: `coach:${id}`,
+                id: `coach:${dateKey(new Date())}:${questionFingerprint(quiz.question, quiz.options)}`,
                 kind: "question",
                 skill: quiz.skill,
                 label: `Microreto del coach · ${quiz.skill}`,
@@ -216,7 +216,7 @@ export function CoachPanel({
                 : overview.stats.goalMet
                   ? "Ya cumpliste tu meta. Podemos repasar una duda concreta o cerrar por hoy: descansar ayuda a consolidar lo aprendido."
                   : overview.entries.length
-                    ? `Tienes ${overview.entries.length} temas en tu Cuaderno. No hace falta resolverlos todos: empecemos por uno.`
+                    ? overview.entries.length === 1 ? "Tienes un tema en tu Cuaderno. Empecemos por entenderlo, paso a paso." : `Tienes ${overview.entries.length} temas en tu Cuaderno. No hace falta resolverlos todos: empecemos por uno.`
                     : "¿Poco tiempo, una duda de Grammar o un día difícil? Cuéntame y buscamos un siguiente paso que sí te sirva."}
             </p>
           </div>
@@ -245,7 +245,7 @@ export function CoachPanel({
                   </p>
                 )}
                 {message.answer.quiz && (
-                  <MicroQuiz quiz={message.answer.quiz} id={message.id} />
+                  <MicroQuiz quiz={message.answer.quiz} />
                 )}
                 {message.source === "local" && (
                   <p className="mt-3 text-[10px] text-muted-foreground">

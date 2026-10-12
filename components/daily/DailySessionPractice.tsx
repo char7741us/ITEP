@@ -16,17 +16,11 @@ import { recordLearningActivity } from "@/lib/learning/store";
 import { CoachHelpButton } from "@/components/learning/CoachHelpButton";
 import { StudyStatus } from "@/components/learning/StudyStatus";
 import { PracticeMoment } from "@/components/learning/PracticeMoment";
+import { requestGrade } from "@/lib/exam/grade-request";
 
 type Question = DailySession["grammar"][number];
 
 function words(text: string): number { return text.trim() ? text.trim().split(/\s+/).length : 0; }
-
-async function grade(url: string, body: unknown): Promise<RubricResult> {
-  const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.error ?? "No se pudo evaluar la respuesta.");
-  return payload as RubricResult;
-}
 
 function QuestionBlock({ item, id, selected, onAnswer, referenceText }: { item: Question; id: string; selected?: number; onAnswer: (id: string, index: number) => void; referenceText?: string }) {
   const answered = selected !== undefined;
@@ -54,17 +48,31 @@ function GradeResult({ grade: result, skill, question }: { grade?: RubricResult;
 
 export function DailySessionPractice({ session }: { session: DailySession }) {
   const profile = useActiveProfile();
+  return <DailySessionContent key={`${profile?.username ?? "guest"}:${session.day}`} session={session} />;
+}
+
+function DailySessionContent({ session }: { session: DailySession }) {
+  const profile = useActiveProfile();
   const key = dailyProgressKey(profile?.username ?? null, session.day);
   const progress = useDailyProgressStore((state) => state.days[key]);
   const store = useDailyProgressStore;
   const [hydrated, setHydrated] = useState(false);
   const [showTranscript, setShowTranscript] = useState(false);
   const [recording, setRecording] = useState(false);
+  const [startingAudio, setStartingAudio] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState<"writing" | "speaking" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [aiAvailable, setAiAvailable] = useState<boolean | null>(null);
   const recorderRef = useRef<RecordingHandle | null>(null);
+  const audioLock = useRef(false);
+  const gradeLock = useRef(false);
+  const ownerKey = useRef(key);
+
+  useEffect(() => {
+    ownerKey.current = key;
+    return () => { ownerKey.current = ""; recorderRef.current?.cancel(); recorderRef.current = null; audioLock.current = false; };
+  }, [key]);
 
   useEffect(() => {
     Promise.resolve(useDailyProgressStore.persist.rehydrate()).finally(() => setHydrated(true));
@@ -113,9 +121,17 @@ export function DailySessionPractice({ session }: { session: DailySession }) {
   }
 
   async function startAudio() {
+    if (audioLock.current) return;
+    audioLock.current = true;
+    setStartingAudio(true);
     setError(null);
-    try { recorderRef.current = await startRecording(); setRecording(true); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : "No se pudo activar el micrófono."); }
+    try {
+      const handle = await startRecording();
+      if (ownerKey.current !== key) { handle.cancel(); return; }
+      recorderRef.current = handle; setRecording(true);
+    }
+    catch { if (ownerKey.current === key) { audioLock.current = false; setError("No se pudo activar el micrófono. Revisa el permiso del navegador y vuelve a intentar."); } }
+    finally { if (ownerKey.current === key) setStartingAudio(false); }
   }
 
   async function stopAudio() {
@@ -126,27 +142,32 @@ export function DailySessionPractice({ session }: { session: DailySession }) {
     try {
       const blob = await recorder.stop();
       if (blob.size < 1000) throw new Error("La grabación está vacía. Inténtalo otra vez.");
-      const audioKey = `daily:${key}:speaking`;
+      if (ownerKey.current !== key) return;
+      const audioKey = `daily:${key}:speaking:${crypto.randomUUID()}`;
       await saveSpeakingAudio(audioKey, blob);
-      setAudioUrl((previous) => { if (previous) URL.revokeObjectURL(previous); return URL.createObjectURL(blob); });
       store.getState().setSpeakingAudio(key, audioKey);
       void recordLearningActivity(profile?.username ?? null, { id: `daily:${key}:speaking`, kind: "speaking", skill: "speaking", label: `Grabación del día ${session.day}` });
     } catch (cause) { setError(cause instanceof Error ? cause.message : "No se pudo guardar la grabación."); }
+    finally { audioLock.current = false; }
   }
 
   async function evaluateWriting() {
+    if (gradeLock.current) return;
+    gradeLock.current = true;
     setBusy("writing"); setError(null);
     try {
-      const result = await grade("/api/grade/writing", { taskTitle: `Día ${session.day}: Writing ${session.writing.taskNumber}`, prompt: session.writing.prompt, minWords: session.writing.minWords, maxWords: session.writing.maxWords, studentText: writingText });
+      const result = await requestGrade("/api/grade/writing", { taskTitle: `Día ${session.day}: Writing ${session.writing.taskNumber}`, prompt: session.writing.prompt, minWords: session.writing.minWords, maxWords: session.writing.maxWords, studentText: writingText });
+      if (store.getState().days[key]?.writingText !== writingText) throw new Error("Cambiaste el borrador mientras se evaluaba. Solicita una nueva evaluación del texto actual.");
       store.getState().setWritingGrade(key, result);
       void recordLearningActivity(profile?.username ?? null, { id: `daily:${key}:writing`, kind: "writing", skill: "writing", label: `Texto del día ${session.day}` });
       await saveProductiveFeedback(`daily:${key}`, profile?.username ?? null, "Writing", session.writing.taskNumber, result);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "No se pudo evaluar Writing."); }
-    finally { setBusy(null); }
+    finally { gradeLock.current = false; setBusy(null); }
   }
 
   async function evaluateSpeaking() {
-    if (!progress?.speakingAudioKey) return;
+    if (!progress?.speakingAudioKey || gradeLock.current) return;
+    gradeLock.current = true;
     setBusy("speaking"); setError(null);
     try {
       const blob = await getSpeakingAudio(progress.speakingAudioKey);
@@ -154,11 +175,12 @@ export function DailySessionPractice({ session }: { session: DailySession }) {
       const bytes = new Uint8Array(await blob.arrayBuffer());
       let binary = "";
       for (const byte of bytes) binary += String.fromCharCode(byte);
-      const result = await grade("/api/grade/speaking", { taskTitle: `Día ${session.day}: Speaking ${session.speaking.taskNumber}`, prompt: session.speaking.prompt, audioBase64: btoa(binary), mimeType: blob.type || "audio/webm" });
+      const result = await requestGrade("/api/grade/speaking", { taskTitle: `Día ${session.day}: Speaking ${session.speaking.taskNumber}`, prompt: session.speaking.prompt, audioBase64: btoa(binary), mimeType: blob.type || "audio/webm" });
+      if (store.getState().days[key]?.speakingAudioKey !== progress.speakingAudioKey) throw new Error("La grabación cambió mientras se evaluaba. Evalúa de nuevo la grabación actual.");
       store.getState().setSpeakingGrade(key, result);
       await saveProductiveFeedback(`daily:${key}`, profile?.username ?? null, "Speaking", session.speaking.taskNumber, result);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "No se pudo evaluar Speaking."); }
-    finally { setBusy(null); }
+    finally { gradeLock.current = false; setBusy(null); }
   }
 
   async function complete() {
@@ -196,11 +218,27 @@ export function DailySessionPractice({ session }: { session: DailySession }) {
       <StudyStatus />
       <Card><CardHeader><CardTitle>Grammar</CardTitle><CardDescription>Responde tres preguntas de gramática. Cada respuesta se guarda automáticamente.</CardDescription></CardHeader><CardContent className="space-y-3">{session.grammar.map((item, i) => <QuestionBlock key={i} item={item} id={`grammar-${i}`} selected={answers[`grammar-${i}`]} onAnswer={answer} />)}</CardContent></Card>
       {session.grammar.every((_, index) => answers[`grammar-${index}`] !== undefined) && <PracticeMoment question={session.grammar[2].prompt} explanation={session.grammar[2].explanation} />}
-<Card><CardHeader><CardTitle>Reading</CardTitle><CardDescription>Lee el texto y responde las tres preguntas.</CardDescription></CardHeader><CardContent className="space-y-4"><article className="whitespace-pre-line rounded-lg bg-muted/40 p-4 leading-relaxed"><h3 className="mb-2 font-semibold">{session.reading.title}</h3>{session.reading.passage}</article>{session.reading.questions.map((item, i) => <QuestionBlock key={i} item={item} id={`reading-${i}`} selected={answers[`reading-${i}`]} onAnswer={answer} />)}</CardContent></Card>
+<Card><CardHeader><CardTitle>Reading</CardTitle><CardDescription>Lee el texto y responde las tres preguntas.</CardDescription></CardHeader><CardContent className="space-y-4"><article className="whitespace-pre-line rounded-lg bg-muted/40 p-4 leading-relaxed"><h3 className="mb-2 font-semibold">{session.reading.title}</h3>{session.reading.passage}</article>{session.reading.questions.map((item, i) => <QuestionBlock key={i} item={item} id={`reading-${i}`} selected={answers[`reading-${i}`]} onAnswer={answer} referenceText={session.reading.passage} />)}</CardContent></Card>
 <Card><CardHeader><CardTitle>Listening</CardTitle><CardDescription>Escucha el diálogo antes de responder. Puedes repetirlo para estudiar.</CardDescription></CardHeader><CardContent className="space-y-4"><audio controls preload="none" src={session.listening.audioAssetPath} className="w-full" aria-label={`Diálogo del día ${session.day}`}><a href={session.listening.audioAssetPath}>Descargar audio</a></audio>{session.listening.questions.map((item, i) => <QuestionBlock key={i} item={item} id={`listening-${i}`} selected={answers[`listening-${i}`]} onAnswer={answer} referenceText={session.listening.lines.map((line) => `${line.speaker}: ${line.text}`).join("\n")} />)}<Button variant="outline" onClick={() => setShowTranscript((value) => !value)}>{showTranscript ? "Ocultar" : "Ver"} transcripción</Button>{showTranscript && <div className="space-y-2 rounded-lg bg-muted/40 p-4 text-sm">{session.listening.lines.map((line, i) => <p key={i}><strong>{line.speaker}:</strong> {line.text}</p>)}</div>}</CardContent></Card>
-      <Card><CardHeader><CardTitle>Writing · Tarea {session.writing.taskNumber}</CardTitle><CardDescription>{session.writing.minWords}–{session.writing.maxWords} palabras. Tu borrador se guarda en este navegador.</CardDescription></CardHeader><CardContent className="space-y-3"><p>{session.writing.prompt}</p><textarea aria-label="Tu respuesta escrita" className="min-h-52 w-full rounded-lg border bg-background p-3" value={writingText} disabled={Boolean(progress?.completedAt)} onChange={(event) => store.getState().setWriting(key, event.target.value)} /><p className={`text-sm ${writingWords >= session.writing.minWords && writingWords <= session.writing.maxWords ? "text-green-700" : "text-muted-foreground"}`}>{writingWords} palabras</p><Button variant="outline" disabled={!writingText.trim() || busy !== null || aiAvailable !== true} onClick={evaluateWriting}>{busy === "writing" ? "Evaluando…" : "Evaluación orientativa con IA"}</Button><GradeResult grade={progress?.writingGrade} skill="Writing" question={session.writing.prompt} /></CardContent></Card>
-      <Card><CardHeader><CardTitle>Speaking · Tarea {session.speaking.taskNumber}</CardTitle><CardDescription>{session.speaking.prepSeconds} segundos para preparar y {session.speaking.responseSeconds} segundos recomendados para responder.</CardDescription></CardHeader><CardContent className="space-y-3"><p>{session.speaking.prompt}</p><div className="flex flex-wrap gap-2">{recording ? <Button onClick={stopAudio}>Detener y guardar</Button> : <Button onClick={startAudio}>{progress?.speakingAudioKey ? "Volver a grabar" : "Grabar respuesta"}</Button>}<Button variant="outline" disabled={!progress?.speakingAudioKey || busy !== null || aiAvailable !== true} onClick={evaluateSpeaking}>{busy === "speaking" ? "Evaluando…" : "Evaluación orientativa con IA"}</Button></div>{recording && <p role="status" className="text-sm text-red-700">Grabando… Pulsa «Detener y guardar» al terminar.</p>}{audioUrl && <audio controls src={audioUrl} className="w-full" aria-label="Tu respuesta oral grabada" />}{progress?.speakingAudioKey && !audioUrl && <p className="text-sm text-muted-foreground">Grabación guardada en este navegador.</p>}{!progress?.speakingPracticed && <Button variant="ghost" onClick={markSpeaking}>Hice la práctica oral sin grabación</Button>}{progress?.speakingPracticed && !progress.speakingAudioKey && <p className="text-sm text-muted-foreground">Práctica oral marcada como realizada, sin grabación.</p>}<GradeResult grade={progress?.speakingGrade} skill="Speaking" question={session.speaking.prompt} /></CardContent></Card>
-      {aiAvailable === false && <p role="status" className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">La clave de Gemini del sitio no está configurada correctamente. Puedes completar y guardar toda la práctica; la evaluación automática de Writing y Speaking estará disponible cuando se actualice la clave.</p>}
+      <Card><CardHeader><CardTitle>Writing · Tarea {session.writing.taskNumber}</CardTitle><CardDescription>{session.writing.minWords}–{session.writing.maxWords} palabras. Tu borrador se guarda en este navegador.</CardDescription></CardHeader><CardContent className="space-y-3"><p>{session.writing.prompt}</p><textarea aria-label="Tu respuesta escrita" maxLength={20000} className="min-h-52 w-full rounded-lg border bg-background p-3" value={writingText} disabled={Boolean(progress?.completedAt) || busy === "writing"} onChange={(event) => store.getState().setWriting(key, event.target.value)} /><p className={`text-sm ${writingWords >= session.writing.minWords && writingWords <= session.writing.maxWords ? "text-green-700" : "text-muted-foreground"}`}>{writingWords} palabras</p><p className="text-[11px] text-muted-foreground">Al evaluar, tu texto y la consigna se envían a Gemini de Google. No incluyas datos sensibles. La nota es orientativa.</p><Button variant="outline" disabled={!writingText.trim() || busy !== null || aiAvailable !== true} onClick={evaluateWriting}>{busy === "writing" ? "Evaluando…" : "Evaluación orientativa con IA"}</Button><GradeResult grade={progress?.writingGrade} skill="Writing" question={session.writing.prompt} /></CardContent></Card>
+      <Card>
+        <CardHeader><CardTitle>Speaking · Tarea {session.speaking.taskNumber}</CardTitle><CardDescription>{session.speaking.prepSeconds} segundos para preparar y {session.speaking.responseSeconds} segundos recomendados para responder.</CardDescription></CardHeader>
+        <CardContent className="space-y-3">
+          <p>{session.speaking.prompt}</p>
+          <p className="text-[11px] text-muted-foreground">La grabación se guarda en este navegador. Solo se envía a Gemini de Google cuando pides evaluarla. No incluyas datos sensibles.</p>
+          <div className="flex flex-wrap gap-2">
+            {recording ? <Button onClick={stopAudio}>Detener y guardar</Button> : <Button disabled={startingAudio || busy !== null} onClick={startAudio}>{startingAudio ? "Abriendo micrófono…" : progress?.speakingAudioKey ? "Volver a grabar" : "Grabar respuesta"}</Button>}
+            <Button variant="outline" disabled={recording || startingAudio || !progress?.speakingAudioKey || busy !== null || aiAvailable !== true} onClick={evaluateSpeaking}>{busy === "speaking" ? "Evaluando…" : "Evaluación orientativa con IA"}</Button>
+          </div>
+          {recording && <p role="status" className="text-sm text-red-700">Grabando… Pulsa «Detener y guardar» al terminar.</p>}
+          {audioUrl && <audio controls src={audioUrl} className="w-full" aria-label="Tu respuesta oral grabada" />}
+          {progress?.speakingAudioKey && !audioUrl && <p className="text-sm text-muted-foreground">Grabación guardada en este navegador.</p>}
+          {!progress?.speakingPracticed && <Button variant="ghost" disabled={recording || startingAudio} onClick={markSpeaking}>Hice la práctica oral sin grabación</Button>}
+          {progress?.speakingPracticed && !progress.speakingAudioKey && <p className="text-sm text-muted-foreground">Práctica oral marcada como realizada, sin grabación.</p>}
+          <GradeResult grade={progress?.speakingGrade} skill="Speaking" question={session.speaking.prompt} />
+        </CardContent>
+      </Card>
+      {aiAvailable === false && <p role="status" className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">La evaluación con IA no está disponible ahora. Puedes completar y guardar toda la práctica y volver a intentar más tarde.</p>}
       {error && <p role="alert" className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-900">{error}</p>}
       <Card><CardHeader><CardTitle>{progress?.completedAt ? "Sesión completada" : "Terminar el día"}</CardTitle><CardDescription>Necesitas responder las 9 preguntas, escribir dentro del rango de palabras y practicar oralmente. La grabación y la evaluación con IA son opcionales.</CardDescription></CardHeader><CardContent className="space-y-3"><p className="text-sm">Resultado objetivo: {score}/9 aciertos. {highPracticeGoal ? "🌟 ¡Alcanzaste la meta alta de hoy!" : answeredCount === 9 ? "🌱 Tus errores son tu plan de repaso." : "Cada respuesta te acerca al final."}</p>{progress?.completedAt ? <p className="text-sm">Tus errores ya se añadieron al Cuaderno de Errores. Puedes volver a repasar esta sesión mañana.</p> : <Button disabled={!canComplete || recording} onClick={complete}>Completar día {session.day}</Button>}<div className="flex gap-4 text-sm"><Link href="/practica-diaria" className="text-primary underline">Ver calendario</Link><Link href="/cuaderno-errores" className="text-primary underline">Cuaderno de Errores</Link></div></CardContent></Card>
     </div>

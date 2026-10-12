@@ -30,7 +30,7 @@ export function ProfileControl() {
           </>
         )}
       </Button>
-      <ProfileDialog key={profile?.username ?? "new-profile"} open={open} onOpenChange={setOpen} activeProfile={profile} />
+      <ProfileDialog key={`${profile?.username ?? "new-profile"}:${open}`} open={open} onOpenChange={setOpen} activeProfile={profile} />
     </>
   );
 }

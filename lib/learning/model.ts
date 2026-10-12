@@ -23,12 +23,27 @@ export type ActivityInput = Omit<LearningActivity, "at" | "day" | "xp"> & {
 };
 export type PetColor = "mint" | "rose" | "lavender";
 export type PetAccessory = "none" | "star" | "flower" | "scholar";
+export interface StudyPlan {
+  weeklyDays: 2 | 3 | 5;
+  focus: SkillSection | "balanced";
+  targetDate?: string;
+}
+export interface RecallRecord {
+  questionId: string;
+  prediction: string;
+  confidence: "sure" | "between" | "guess";
+  selectedIndex: number;
+  reflection: string;
+  answeredAt: string;
+}
 export interface LearningProfile {
   activities: LearningActivity[];
   petName: string;
   petColor: PetColor;
   accessory: PetAccessory;
   dailyGoal: 5 | 10 | 15;
+  studyPlan?: StudyPlan;
+  recalls?: Record<string, RecallRecord>;
 }
 export const emptyLearningProfile = (): LearningProfile => ({
   activities: [],

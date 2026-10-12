@@ -17,15 +17,15 @@ import { StudyStatus } from "@/components/learning/StudyStatus";
 export default function DashboardPage() {
   const profile = useActiveProfile();
   const [allAttempts, setAllAttempts] = useState<AttemptRecord[] | null>(null);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
-    listAttempts().then(setAllAttempts);
+    listAttempts().then(setAllAttempts).catch(() => setLoadError(true));
   }, []);
 
-  // Attempts made before this browser had a named profile (profileUsername is
-  // unset) still show up so nobody's history silently disappears — only
-  // attempts explicitly tagged to a *different* profile are filtered out.
-  const attempts = allAttempts?.filter((a) => !profile || !a.profileUsername || a.profileUsername === profile.username) ?? null;
+  // Named and guest profiles use the same isolation rule as the study hub.
+  // Older unnamed attempts remain available under the guest profile.
+  const attempts = allAttempts?.filter((a) => (a.profileUsername ?? null) === (profile?.username ?? null)) ?? null;
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-10">
@@ -47,7 +47,7 @@ export default function DashboardPage() {
       <StudyStatus />
       <StudyCalendar />
 
-      {attempts === null ? (
+      {loadError ? <p role="alert" className="text-sm text-destructive">No se pudo cargar el historial. No borres los datos del navegador; revisa el almacenamiento e intenta recargar.</p> : attempts === null ? (
         <p className="text-sm text-muted-foreground">Cargando...</p>
       ) : (
         <>

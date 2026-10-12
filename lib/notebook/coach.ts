@@ -1,4 +1,5 @@
 import type { NotebookSection } from "./failedRules";
+import { grammarC1Topics, correctedSentence, completedSentence } from "@/lib/grammar-c1/bank";
 
 export interface CoachGuide {
   title: string;
@@ -109,7 +110,7 @@ const grammarGuides: { match: RegExp; guide: CoachGuide }[] = [
     },
   },
   {
-    match: /third conditional|hypothetical past|unreal past|if \+ past perfect|if clauses use the past perfect/i,
+    match: /third conditional|hypothetical past|unreal past|if \+ past perfect|if clauses use the past perfect|condición irreal pasada|tercer condicional|pasado irreal/i,
     guide: {
       title: "Viaje a un pasado imaginario",
       idea: "Para imaginar un pasado diferente, conecta una condición pasada con un resultado que no ocurrió.",
@@ -304,5 +305,18 @@ export function getCoachGuide(section: NotebookSection, failedRule: string): Coa
   if (section !== "Grammar") {
     return comprehensionGuides.find(({ match }) => match.test(failedRule))?.guide ?? detailGuide;
   }
-  return grammarGuides.find(({ match }) => match.test(failedRule))?.guide ?? fallbackGrammarGuide;
+  const specific = grammarGuides.find(({ match }) => match.test(failedRule))?.guide;
+  if (specific) return specific;
+  const topic = grammarC1Topics.find((candidate) => failedRule.toLocaleLowerCase().startsWith(`${candidate.title}:`.toLocaleLowerCase()));
+  if (!topic) return fallbackGrammarGuide;
+  const question = topic.questions.find((item) => failedRule.includes(item.explanation));
+  return {
+    title: topic.title,
+    idea: topic.rule,
+    pattern: topic.subtopics.slice(0, 3).join(" ↔ "),
+    example: question ? question.kind === "error-word" ? correctedSentence(question) : completedSentence(question) : topic.example,
+    meaning: question?.explanation ?? topic.focus,
+    trap: "No elijas solo porque una forma te resulta familiar: comprueba la estructura completa y la pista de esta regla.",
+    steps: ["Localiza la pista en la oración", "Relaciona la pista con esta regla", "Comprueba tu elección en la oración completa"],
+  };
 }

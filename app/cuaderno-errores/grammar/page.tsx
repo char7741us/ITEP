@@ -35,7 +35,6 @@ export default function GrammarC1Page() {
   const [roundCorrect, setRoundCorrect] = useState(0);
   const [finished, setFinished] = useState(false);
   const answeredRef = useRef(false);
-  const roundIdRef = useRef("");
 
   useEffect(() => {
     let mounted = true;
@@ -61,7 +60,6 @@ export default function GrammarC1Page() {
   async function startTopic(topicId: string) {
     const chosen = grammarC1Topics.find((item) => item.id === topicId);
     if (!chosen) return;
-    roundIdRef.current = crypto.randomUUID();
     if (!useGrammarProgressStore.persist.hasHydrated()) await useGrammarProgressStore.persist.rehydrate();
     const round = useGrammarProgressStore.getState().startRound(profileKey, topicId);
     const errorIndexes = chosen.questions.flatMap((item, index) => item.kind === "error-word" ? [index] : []);
@@ -88,7 +86,6 @@ export default function GrammarC1Page() {
   async function startDay(dayNumber: number) {
     const chosen = grammarC1Days.find((item) => item.day === dayNumber);
     if (!chosen) return;
-    roundIdRef.current = crypto.randomUUID();
     if (!useGrammarProgressStore.persist.hasHydrated()) await useGrammarProgressStore.persist.rehydrate();
     setRoundRefs(chosen.refs);
     setActiveTopicId(null);
@@ -120,7 +117,7 @@ export default function GrammarC1Page() {
     if (position === roundRefs.length - 1) {
       if (day) useGrammarProgressStore.getState().recordDayResult(profileKey, day.day, roundCorrect, roundRefs.length);
       const passedDay = day && roundCorrect >= Math.ceil(roundRefs.length * 0.85);
-      void recordLearningActivity(profile?.username ?? null, { id: passedDay ? `grammar-history:${day.day}` : `grammar-round:${roundIdRef.current}`, kind: "round", skill: "grammar", label: day ? `Día ${day.day} de Grammar ${passedDay ? "aprobado" : "practicado"}` : `Ronda de ${topic.title} completada` });
+      void recordLearningActivity(profile?.username ?? null, { id: passedDay ? `grammar-history:${day.day}` : `grammar-round:${dateKey(new Date())}:${day ? `day-${day.day}` : topic.id}`, kind: "round", skill: "grammar", label: day ? `Día ${day.day} de Grammar ${passedDay ? "aprobado" : "practicado"}` : `Ronda de ${topic.title} completada` });
       setFinished(true);
     }
     else {
@@ -140,7 +137,7 @@ export default function GrammarC1Page() {
         <div className="relative grid gap-5 sm:grid-cols-[1fr_auto] sm:items-center">
           <div>
             <p className="mb-2 inline-flex items-center gap-2 rounded-full bg-white/75 px-3 py-1 text-xs font-extrabold uppercase tracking-wider text-primary dark:bg-white/10"><Sparkles className="h-3.5 w-3.5" /> Tu laboratorio de Grammar C1</p>
-            <h1 className="text-3xl font-black leading-tight sm:text-5xl">Grammar C1 en 20 días 🕵️‍♀️</h1>
+            <h1 className="text-3xl font-black leading-tight sm:text-5xl">Ruta Grammar C1 · 20 días 🕵️‍♀️</h1>
             <p className="mt-3 max-w-2xl text-sm leading-relaxed text-foreground/80 sm:text-base">Un día, una meta: recorre los 13 temas esenciales con los dos formatos de Grammar de iTEP. Completa oraciones, detecta errores y entiende cada corrección.</p>
           </div>
           <div className="rounded-3xl bg-white/80 p-5 text-center shadow-sm dark:bg-white/10" aria-label="Progreso de Grammar C1">

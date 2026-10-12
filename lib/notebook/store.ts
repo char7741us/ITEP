@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
+import { trackedStorage, reportStorageProblem } from "@/lib/storage/health";
 import type { FailedTopic, NotebookSection } from "./failedRules";
 import type { RubricResult } from "@/lib/types/attempt";
 
@@ -169,7 +170,8 @@ export const useErrorNotebookStore = create<ErrorNotebookState>()(
         const old = persisted as Partial<ErrorNotebookState>;
         return { ...old, masteredTopics: old.masteredTopics ?? [], productiveFeedback: old.productiveFeedback ?? [] } as ErrorNotebookState;
       },
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => trackedStorage),
+      onRehydrateStorage: () => (_state, error) => { if (error) reportStorageProblem(); },
       skipHydration: true,
       partialize: (state) => ({
         entries: state.entries,

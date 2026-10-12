@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { getAttempt, saveAttempt } from "@/lib/storage/attemptsRepo";
 import { loadContentPack } from "@/lib/content/loader";
 import { retryMissingGrades } from "@/lib/exam/grading";
+import { hasCompleteSkillGrade, isPartialAttempt } from "@/lib/exam/grade-status";
 import { getC1PracticeReadiness } from "@/lib/exam/readiness";
 import { getReadingItems, getGrammarItems } from "@/lib/exam/machine";
 import { getListeningItems } from "@/lib/exam/listening";
@@ -39,6 +40,7 @@ export default function ResultsPage() {
   const [contentPack, setContentPack] = useState<ExamContentPack | null>(null);
   const [retrying, setRetrying] = useState(false);
   const [retryError, setRetryError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -49,7 +51,7 @@ export default function ResultsPage() {
       }
       setContentPack(loadContentPack(`${record.contentPackId}@${record.contentPackVersion}`));
       setAttempt(record);
-    })();
+    })().catch(() => { setLoadError(true); setAttempt(null); });
   }, [params.attemptId]);
 
   if (attempt === undefined) {
@@ -59,7 +61,7 @@ export default function ResultsPage() {
   if (!attempt || !contentPack || !attempt.scores) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center text-muted-foreground">
-        <p>No se encontraron resultados para este simulacro.</p>
+        <p>{loadError ? "No se pudo acceder al historial. Revisa el almacenamiento de este navegador; no borres sus datos." : "No se encontraron resultados para este simulacro en este navegador."}</p>
         <Button nativeButton={false} render={<Link href="/exam/new">Comenzar un nuevo simulacro</Link>} />
       </div>
     );
@@ -67,14 +69,9 @@ export default function ResultsPage() {
 
   const contentPackKey = `${attempt.contentPackId}@${attempt.contentPackVersion}`;
   const readiness = getC1PracticeReadiness(attempt, contentPack);
-  const gradingErrors = attempt.gradingErrors ?? [];
-  const ungradedSections = gradingErrors.some((error) => error.startsWith("Writing y Speaking:"))
-    ? ["writing", "speaking"]
-    : [
-        ...(gradingErrors.some((error) => error.startsWith("Writing ")) ? ["writing"] : []),
-        ...(gradingErrors.some((error) => error.startsWith("Speaking ")) ? ["speaking"] : []),
-      ];
-  const canRetry = gradingErrors.length > 0 && (
+  const partial = isPartialAttempt(attempt);
+  const ungradedSections = ["writing", "speaking"].filter((section) => !hasCompleteSkillGrade(attempt, section as "writing" | "speaking"));
+  const canRetry = partial && (
     attempt.responses.writing.some((response) => response.text.trim() && !response.grading) ||
     attempt.responses.speaking.some((response) => response.audioBlobKey && !response.grading)
   );
@@ -104,18 +101,18 @@ export default function ResultsPage() {
         </div>
       </div>
 
-      {gradingErrors.length > 0 && (
+      {partial && (
         <Alert variant="destructive">
           <AlertTitle>Calificación incompleta</AlertTitle>
           <AlertDescription>
             La evaluación de IA no terminó para todas las respuestas. El promedio mostrado excluye las secciones sin
-            calificación; no lo interpretes como nota final. Tus respuestas siguen guardadas en este navegador.
+            calificación en los resultados nuevos; no lo interpretes como nota final. Una sección sin respuesta o grabación tampoco constituye una evaluación. Tus respuestas disponibles siguen guardadas en este navegador.
           </AlertDescription>
           {canRetry && <Button className="mt-3" onClick={retryGrades} disabled={retrying}>{retrying ? "Calificando respuestas guardadas…" : "Reintentar Writing y Speaking"}</Button>}
         </Alert>
       )}
       {retryError && <Alert variant="destructive"><AlertTitle>No se pudo guardar la nueva calificación</AlertTitle><AlertDescription>{retryError}</AlertDescription></Alert>}
-      <ScoreSummaryCard scores={attempt.scores} isPartial={gradingErrors.length > 0} />
+      <ScoreSummaryCard scores={attempt.scores} isPartial={partial} />
       <section className="rounded-2xl border border-primary/20 bg-primary/5 p-5" aria-label="Meta de práctica C1">
         <p className="text-xs font-bold uppercase tracking-wider text-primary">Tu siguiente misión</p>
         <h2 className="mt-1 text-xl font-bold">{readiness.ready ? "🌟 Alcanzaste la meta exigente de práctica C1" : "🎯 Camino a la meta de práctica C1"}</h2>

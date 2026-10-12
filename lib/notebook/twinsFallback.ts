@@ -19,10 +19,11 @@ export function getBankTwins(section: NotebookSection, failedRule: string): Note
   if (section === "Grammar") {
     const topic = grammarC1Topics.find((candidate) => normalized(failedRule).startsWith(normalized(`${candidate.title}:`)));
     if (topic) {
-      const errors = topic.questions.filter((question) => question.kind === "error-word");
-      const completions = topic.questions.filter((question) => question.kind === "complete-sentence");
-      const exact = errors.find((question) => normalized(failedRule).includes(normalized(question.explanation)));
-      const selected = [exact ?? errors[0], errors.find((question) => question !== exact && question !== errors[0]) ?? errors[1], completions[0]];
+      const remaining = topic.questions.filter((question) => !normalized(failedRule).includes(normalized(question.explanation)));
+      const errors = remaining.filter((question) => question.kind === "error-word");
+      const completions = remaining.filter((question) => question.kind === "complete-sentence");
+      if (errors.length < 2 || completions.length < 1) return null;
+      const selected = [errors[0], errors[1], completions[0]];
       return selected.map((question): NotebookQuestion => {
         if (question.kind === "complete-sentence") return {
           context: "", question: question.sentence, options: question.choices,

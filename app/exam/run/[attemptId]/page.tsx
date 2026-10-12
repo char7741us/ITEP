@@ -23,6 +23,7 @@ import { PrepCountdown } from "@/components/exam/speaking/PrepCountdown";
 import { SpeakingTask } from "@/components/exam/speaking/SpeakingTask";
 import { Button } from "@/components/ui/button";
 import { recordLearningActivity } from "@/lib/learning/store";
+import { reportStorageProblem } from "@/lib/storage/health";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function ExamRunPage() {
@@ -30,6 +31,7 @@ export default function ExamRunPage() {
   const router = useRouter();
   const [attempt, setAttempt] = useState<AttemptRecord | null | undefined>(undefined);
   const [contentPack, setContentPack] = useState<ExamContentPack | null>(null);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -43,7 +45,7 @@ export default function ExamRunPage() {
       const pack = loadContentPack(`${record.contentPackId}@${record.contentPackVersion}`);
       setContentPack(pack);
       setAttempt(record);
-    })();
+    })().catch(() => { if (!cancelled) { setLoadError(true); setAttempt(null); } });
     return () => {
       cancelled = true;
     };
@@ -56,7 +58,7 @@ export default function ExamRunPage() {
   if (attempt === null || !contentPack) {
     return (
       <CenteredMessage>
-        No se encontró este simulacro.{" "}
+        {loadError ? "No se pudo recuperar el simulacro. No borres los datos del navegador; vuelve a intentar." : "No se encontró este simulacro en este navegador."}{" "}
         <Button variant="link" onClick={() => router.push("/exam/new")}>
           Empezar uno nuevo
         </Button>
@@ -74,6 +76,8 @@ function CenteredMessage({ children }: { children: React.ReactNode }) {
 function ExamMachineView({ attempt, contentPack }: { attempt: AttemptRecord; contentPack: ExamContentPack }) {
   const router = useRouter();
   const contentPackKey = `${contentPack.manifest.packId}@${contentPack.manifest.version}`;
+  const [saveError, setSaveError] = useState(false);
+  const [saveRetry, setSaveRetry] = useState(0);
 
   // Read once, synchronously, so the very first render already knows whether to
   // resume a persisted mid-exam snapshot or start fresh — avoids a flash of
@@ -101,11 +105,8 @@ function ExamMachineView({ attempt, contentPack }: { attempt: AttemptRecord; con
         }
       }
       previous = snapshot.context;
-      if (snapshot.status === "done") {
-        clearRuntimeSnapshot(attempt.id);
-      } else {
-        saveRuntimeSnapshot(attempt.id, actorRef.getPersistedSnapshot());
-      }
+      // Retain even a finished snapshot until the durable result write succeeds.
+      saveRuntimeSnapshot(attempt.id, actorRef.getPersistedSnapshot());
     });
     return () => subscription.unsubscribe();
   }, [actorRef, attempt.id, attempt.profileUsername]);
@@ -123,6 +124,7 @@ function ExamMachineView({ attempt, contentPack }: { attempt: AttemptRecord; con
     (async () => {
       const completed = buildCompletedAttemptRecord(attempt, state.context);
       await saveAttempt(completed);
+      clearRuntimeSnapshot(attempt.id);
       try {
         await recordCompletedAttempt(
           completed.id,
@@ -133,9 +135,9 @@ function ExamMachineView({ attempt, contentPack }: { attempt: AttemptRecord; con
         console.error("No se pudo guardar el cuaderno de errores:", error);
       }
       router.push(`/results/${attempt.id}`);
-    })();
+    })().catch(() => { reportStorageProblem(); setSaveError(true); });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.value]);
+  }, [state.value, saveRetry]);
 
   async function handleSpeakingRecorded(taskNumber: 1 | 2, blob: Blob) {
     const blobKey = `${attempt.id}:${taskNumber}`;
@@ -144,10 +146,13 @@ function ExamMachineView({ attempt, contentPack }: { attempt: AttemptRecord; con
       void recordLearningActivity(attempt.profileUsername ?? null, { id: `exam:${attempt.id}:speaking:${taskNumber}`, kind: "speaking", skill: "speaking", label: `Speaking · tarea ${taskNumber}` });
       send({ type: "SAVE_SPEAKING_RECORDING", taskNumber, blobKey });
     } catch (error) {
+      reportStorageProblem();
       console.error("No se pudo guardar la grabación:", error);
       send({ type: "SAVE_SPEAKING_RECORDING", taskNumber, blobKey: "" });
     }
   }
+
+  if (saveError) return <CenteredMessage><div className="max-w-lg space-y-4"><h1 className="text-xl font-semibold text-foreground">No se pudo guardar el resultado.</h1><p>No cierres esta pestaña ni borres los datos del navegador. Tu resultado sigue en memoria y se conservó la copia de reanudación cuando fue posible. Libera espacio e intenta guardar de nuevo.</p><Button onClick={() => { setSaveError(false); setSaveRetry((value) => value + 1); }}>Reintentar guardado</Button></div></CenteredMessage>;
 
   if (state.matches("setup")) {
     return <Instructions mode={attempt.mode} legacyOrder={legacyOrder} onStart={() => send({ type: "START" })} />;

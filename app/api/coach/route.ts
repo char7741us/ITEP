@@ -1,4 +1,5 @@
 import { getGeminiClient, WRITING_MODELS } from "@/lib/gemini/provider";
+import { limitAIRequest, readLimitedJSON, requestProblemResponse } from "@/lib/server/ai-request";
 import {
   coachAnswerSchema,
   coachRequestSchema,
@@ -33,15 +34,18 @@ const responseSchema = {
 };
 
 export async function POST(request: Request) {
-  const parsed = coachRequestSchema.safeParse(
-    await request.json().catch(() => null),
-  );
+  let body;
+  try { body = await readLimitedJSON(request); }
+  catch (error) { return requestProblemResponse(error); }
+  const parsed = coachRequestSchema.safeParse(body);
   if (!parsed.success)
     return Response.json(
       { error: "Escribe una consulta breve y válida para tu coach." },
       { status: 400 },
     );
   const input = parsed.data;
+  const limited = limitAIRequest(request);
+  if (limited) return limited;
   if (!(process.env.GEMINI_API_KEY ?? "").trim())
     return Response.json({ ...localCoach(input), source: "local" });
   for (const model of WRITING_MODELS) {

@@ -21,6 +21,7 @@ import { PetCorner } from "./PetCorner";
 import { StudyCalendar } from "./StudyCalendar";
 import { CoachPanel } from "./CoachPanel";
 import { FocusTimer } from "./FocusTimer";
+import { StudyJourney } from "./StudyJourney";
 
 export function StudyHub() {
   const {
@@ -100,6 +101,7 @@ export function StudyHub() {
               {next.action}
               <ArrowRight size={16} />
             </Link>
+            <Link href="/reto-diario" className="mt-3 block text-xs font-semibold underline underline-offset-4">Solo tengo 3 minutos: mi reto Grammar →</Link>
           </div>
           <div className="relative mt-6 flex items-start gap-3">
             <span
@@ -134,7 +136,7 @@ export function StudyHub() {
                 />
               </div>
               <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
-                Una respuesta, un texto evaluado o una práctica oral = un paso.
+                Una respuesta, una práctica escrita o una práctica oral = un paso.
                 Tu compañero permite cambiar la meta.
               </p>
             </div>
@@ -182,6 +184,8 @@ export function StudyHub() {
         ))}
       </section>
 
+      <StudyJourney key={profileKey} />
+
       <div className="grid items-start gap-5 lg:grid-cols-[.95fr_1.2fr]">
         <StudyCalendar />
         <CoachPanel key={profileKey} />
@@ -226,7 +230,7 @@ export function StudyHub() {
               title: "Mi jardín de errores",
               subtitle: "Entender · entrenar · superar",
               detail: entries.length
-                ? `${entries.length} temas esperando una nueva oportunidad`
+                ? `${entries.length} ${entries.length === 1 ? "tema esperando" : "temas esperando"} una nueva oportunidad`
                 : "Tus errores tienen un lugar para transformarse",
               icon: Flower2,
               color: "bg-[#f9e6eb]",
@@ -308,7 +312,7 @@ export function StudyHub() {
       <footer className="text-center text-[11px] leading-relaxed text-muted-foreground">
         <p>
           Tu progreso se guarda en este navegador y perfil. Usa el mismo para
-          volver a tu jardín; no borres sus datos.
+          volver a tu jardín; no borres sus datos. <Link href="/mis-datos" className="font-semibold underline">Descarga una copia de tu progreso →</Link>
         </p>
         <p className="mt-2">
           Práctica independiente inspirada en iTEP Academic-Plus. Contenido

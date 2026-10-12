@@ -1,6 +1,7 @@
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { TrendingDown } from "lucide-react";
 import type { AttemptRecord } from "@/lib/types/attempt";
+import { hasCompleteSkillGrade } from "@/lib/exam/grade-status";
 
 const IMPLEMENTED_SECTIONS = ["grammar", "listening", "reading", "writing", "speaking"] as const;
 
@@ -9,11 +10,7 @@ export function WeakestSkillCallout({ attempts }: { attempts: AttemptRecord[] })
   if (completed.length === 0) return null;
 
   const averages = IMPLEMENTED_SECTIONS.map((section) => {
-    const graded = completed.filter((attempt) =>
-      section !== "writing" && section !== "speaking"
-        ? true
-        : !attempt.gradingErrors?.some((error) => error.startsWith(section === "writing" ? "Writing" : "Speaking") || error.startsWith("Writing y Speaking:"))
-    );
+    const graded = completed.filter((attempt) => hasCompleteSkillGrade(attempt, section));
     return { section, average: graded.length ? graded.reduce((sum, a) => sum + a.scores![section], 0) / graded.length : Infinity };
   }).filter((entry) => Number.isFinite(entry.average));
 

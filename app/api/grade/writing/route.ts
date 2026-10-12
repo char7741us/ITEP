@@ -1,30 +1,23 @@
 import { gradeWriting } from "@/lib/gemini/grade";
+import { writingGradeRequestSchema } from "@/lib/gemini/validation";
+import { limitAIRequest, readLimitedJSON, requestProblemResponse } from "@/lib/server/ai-request";
 
-interface WritingGradeRequestBody {
-  taskTitle: string;
-  prompt: string;
-  minWords: number;
-  maxWords: number;
-  studentText: string;
-}
+export const maxDuration = 60;
 
 export async function POST(request: Request) {
-  let body: WritingGradeRequestBody;
+  let body;
   try {
-    body = await request.json();
-  } catch {
-    return Response.json({ error: "Cuerpo de la solicitud inválido." }, { status: 400 });
+    body = writingGradeRequestSchema.parse(await readLimitedJSON(request));
+  } catch (error) {
+    return requestProblemResponse(error);
   }
-
-  if (!body.studentText || !body.studentText.trim()) {
-    return Response.json({ error: "No hay texto para calificar." }, { status: 400 });
-  }
+  const limited = limitAIRequest(request);
+  if (limited) return limited;
 
   try {
     const result = await gradeWriting(body);
-    return Response.json(result);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Error desconocido al calificar con Gemini.";
-    return Response.json({ error: message }, { status: 502 });
+    return Response.json(result, { headers: { "Cache-Control": "no-store" } });
+  } catch {
+    return Response.json({ error: "No pudimos evaluar Writing ahora. Tu texto sigue guardado; vuelve a intentar en un momento." }, { status: 502 });
   }
 }

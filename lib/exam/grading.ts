@@ -9,6 +9,7 @@ import { scoreToBand } from "./cefr";
 import type { ExamMachineContext } from "./machine.types";
 import type { AttemptRecord, AttemptScores, RubricResult } from "@/lib/types/attempt";
 import type { ExamContentPack } from "@/lib/types/content";
+import { requestGrade } from "./grade-request";
 
 async function blobToBase64(blob: Blob): Promise<string> {
   const buffer = await blob.arrayBuffer();
@@ -19,16 +20,7 @@ async function blobToBase64(blob: Blob): Promise<string> {
 }
 
 async function fetchGrade(url: string, body: unknown): Promise<RubricResult> {
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const payload = await res.json().catch(() => ({}));
-    throw new Error(payload.error ?? `Error ${res.status} al calificar`);
-  }
-  return res.json();
+  return requestGrade(url, body);
 }
 
 export async function gradeWritingTask(
@@ -78,16 +70,16 @@ export async function gradeFullAttempt(context: ExamMachineContext): Promise<Gra
   const speakingGrades: Partial<Record<1 | 2, RubricResult>> = {};
 
   if (w1Result.status === "fulfilled" && w1Result.value) writingGrades[1] = w1Result.value;
-  else if (w1Result.status === "rejected") gradingErrors.push(`Writing Tarea 1: ${w1Result.reason}`);
+  else gradingErrors.push(`Writing Tarea 1: ${w1Result.status === "rejected" ? w1Result.reason : "No hay respuesta escrita para evaluar."}`);
 
   if (w2Result.status === "fulfilled" && w2Result.value) writingGrades[2] = w2Result.value;
-  else if (w2Result.status === "rejected") gradingErrors.push(`Writing Tarea 2: ${w2Result.reason}`);
+  else gradingErrors.push(`Writing Tarea 2: ${w2Result.status === "rejected" ? w2Result.reason : "No hay respuesta escrita para evaluar."}`);
 
   if (s1Result.status === "fulfilled" && s1Result.value) speakingGrades[1] = s1Result.value;
-  else if (s1Result.status === "rejected") gradingErrors.push(`Speaking Tarea 1: ${s1Result.reason}`);
+  else gradingErrors.push(`Speaking Tarea 1: ${s1Result.status === "rejected" ? s1Result.reason : "No hay grabación disponible para evaluar."}`);
 
   if (s2Result.status === "fulfilled" && s2Result.value) speakingGrades[2] = s2Result.value;
-  else if (s2Result.status === "rejected") gradingErrors.push(`Speaking Tarea 2: ${s2Result.reason}`);
+  else gradingErrors.push(`Speaking Tarea 2: ${s2Result.status === "rejected" ? s2Result.reason : "No hay grabación disponible para evaluar."}`);
 
   const writingScores = Object.values(writingGrades).map((g) => g!.score);
   const speakingScores = Object.values(speakingGrades).map((g) => g!.score);
@@ -126,7 +118,8 @@ export async function retryMissingGrades(attempt: AttemptRecord, pack: ExamConte
   await Promise.all([
     ...pack.writing.tasks.map(async (task) => {
       const response = writing.find((item) => item.taskNumber === task.taskNumber);
-      if (!response?.text.trim() || response.grading) return;
+      if (response?.grading) return;
+      if (!response?.text.trim()) { errors.push(`Writing Tarea ${task.taskNumber}: No hay respuesta escrita para evaluar.`); return; }
       try {
         response.grading = (await gradeWritingTask(task.title, task.prompt, task.minWords, task.maxWords, response.text)) ?? undefined;
       } catch (error) {
@@ -135,7 +128,8 @@ export async function retryMissingGrades(attempt: AttemptRecord, pack: ExamConte
     }),
     ...pack.speaking.tasks.map(async (task) => {
       const response = speaking.find((item) => item.taskNumber === task.taskNumber);
-      if (!response?.audioBlobKey || response.grading) return;
+      if (response?.grading) return;
+      if (!response?.audioBlobKey) { errors.push(`Speaking Tarea ${task.taskNumber}: No hay grabación disponible para evaluar.`); return; }
       try {
         const grade = await gradeSpeakingTask(task.title, task.prompt, response.audioBlobKey);
         if (grade) response.grading = grade;

@@ -36,30 +36,35 @@ export function ProfileDialog({
   const [name, setName] = useState(activeProfile?.name ?? "");
   const [username, setUsername] = useState(activeProfile?.username ?? "");
   const [usernameTouched, setUsernameTouched] = useState(false);
+  const [creating, setCreating] = useState(!activeProfile);
+  const [error, setError] = useState("");
 
   function handleNameChange(value: string) {
     setName(value);
-    if (!usernameTouched) setUsername(slugifyUsername(value));
+    if (creating && !usernameTouched) setUsername(slugifyUsername(value));
   }
 
   function handleSave() {
     if (!name.trim()) return;
-    saveProfile(name, username || name);
-    onOpenChange(false);
+    const target = slugifyUsername(username || name);
+    if (creating && profiles.some((profile) => profile.username === target)) { setError("Ese usuario ya tiene un perfil. Selecciónalo abajo o elige otro usuario para no cambiar su nombre."); return; }
+    try { saveProfile(name, creating ? target : activeProfile!.username); onOpenChange(false); }
+    catch { setError("No se pudo guardar el perfil. Revisa el almacenamiento de este navegador."); }
   }
 
   function handleSwitch(profile: UserProfile) {
-    setActiveUsername(profile.username);
-    onOpenChange(false);
+    try { setActiveUsername(profile.username); onOpenChange(false); }
+    catch { setError("No se pudo cambiar de perfil. Revisa el almacenamiento del navegador."); }
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{activeProfile ? "Tu perfil" : "¿Cómo te llamas?"}</DialogTitle>
+          <DialogTitle>{creating ? "Crea un perfil local" : "Tu perfil local"}</DialogTitle>
           <DialogDescription>
             Tu nombre y usuario se guardan solo en este navegador, para saludarte y llevar tu progreso.
+            No es una cuenta con contraseña ni se sincroniza con otros dispositivos.
           </DialogDescription>
         </DialogHeader>
 
@@ -70,6 +75,7 @@ export function ProfileDialog({
               id="profile-name"
               placeholder="Ej. María José"
               value={name}
+              maxLength={100}
               onChange={(e) => handleNameChange(e.target.value)}
               autoFocus
             />
@@ -80,12 +86,14 @@ export function ProfileDialog({
               id="profile-username"
               placeholder="ej. maria-jose"
               value={username}
+              readOnly={!creating}
+              maxLength={30}
               onChange={(e) => {
                 setUsernameTouched(true);
                 setUsername(slugifyUsername(e.target.value));
               }}
             />
-            <p className="text-xs text-muted-foreground">Se usa para diferenciar tu progreso si comparten esta computadora.</p>
+            <p className="text-xs text-muted-foreground">{creating ? "Separa tu progreso del de otros perfiles de esta computadora. No protege el acceso con contraseña." : "Este identificador no cambia para conservar tu progreso. Puedes cambiar tu nombre o crear otro perfil."}</p>
           </div>
 
           {profiles.length > 0 && (
@@ -110,11 +118,14 @@ export function ProfileDialog({
               </div>
             </div>
           )}
+          {!creating && <button type="button" onClick={() => { setCreating(true); setName(""); setUsername(""); setUsernameTouched(false); setError(""); }} className="text-sm font-semibold underline">Crear otro perfil</button>}
+          {activeProfile && <button type="button" onClick={() => { try { setActiveUsername(null); onOpenChange(false); } catch { setError("No se pudo abrir el perfil Invitado."); } }} className="block text-xs underline">Ver progreso sin perfil (Invitado)</button>}
+          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         </div>
 
         <DialogFooter>
           <Button onClick={handleSave} disabled={!name.trim()}>
-            {activeProfile ? "Guardar cambios" : "Empezar"}
+            {creating ? "Crear perfil" : "Guardar cambios"}
           </Button>
         </DialogFooter>
       </DialogContent>

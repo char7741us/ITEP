@@ -257,7 +257,7 @@ export default function ErrorNotebookPage() {
         </div>
         <div className="rounded-3xl border border-primary/10 bg-white/80 p-4 shadow-sm dark:bg-card">
           <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground"><BookOpen className="h-4 w-4 text-[#bf5374]" /> Por descubrir</div>
-          <p className="mt-2 text-3xl font-extrabold">{hydrated ? visibleEntries.length + visibleProductive.length : "…"} <span className="text-sm font-medium">pendientes</span></p>
+          <p className="mt-2 text-3xl font-extrabold">{hydrated ? visibleEntries.length + visibleProductive.length : "…"} <span className="text-sm font-medium">{visibleEntries.length + visibleProductive.length === 1 ? "pendiente" : "pendientes"}</span></p>
           <p className="mt-1 text-xs text-muted-foreground">Preguntas y observaciones para entrenar.</p>
         </div>
         <div className="rounded-3xl border border-primary/10 bg-white/80 p-4 shadow-sm dark:bg-card">

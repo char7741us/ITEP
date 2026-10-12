@@ -1,29 +1,23 @@
 import { gradeSpeaking } from "@/lib/gemini/grade";
+import { speakingGradeRequestSchema } from "@/lib/gemini/validation";
+import { limitAIRequest, readLimitedJSON, requestProblemResponse } from "@/lib/server/ai-request";
 
-interface SpeakingGradeRequestBody {
-  taskTitle: string;
-  prompt: string;
-  audioBase64: string;
-  mimeType: string;
-}
+export const maxDuration = 60;
 
 export async function POST(request: Request) {
-  let body: SpeakingGradeRequestBody;
+  let body;
   try {
-    body = await request.json();
-  } catch {
-    return Response.json({ error: "Cuerpo de la solicitud inválido." }, { status: 400 });
+    body = speakingGradeRequestSchema.parse(await readLimitedJSON(request, 3_200_000));
+  } catch (error) {
+    return requestProblemResponse(error);
   }
-
-  if (!body.audioBase64) {
-    return Response.json({ error: "No hay audio para calificar." }, { status: 400 });
-  }
+  const limited = limitAIRequest(request);
+  if (limited) return limited;
 
   try {
     const result = await gradeSpeaking(body);
-    return Response.json(result);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Error desconocido al calificar con Gemini.";
-    return Response.json({ error: message }, { status: 502 });
+    return Response.json(result, { headers: { "Cache-Control": "no-store" } });
+  } catch {
+    return Response.json({ error: "No pudimos evaluar Speaking ahora. Conserva tu grabación y vuelve a intentar en un momento." }, { status: 502 });
   }
 }

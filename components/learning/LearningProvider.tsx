@@ -13,6 +13,7 @@ import {
 } from "@/lib/learning/store";
 import { useFocusStore } from "@/lib/learning/focus";
 import type { SkillSection } from "@/lib/types/content";
+import { reportStorageProblem } from "@/lib/storage/health";
 
 const LearningContext = createContext({
   ready: false,
@@ -48,6 +49,7 @@ export function LearningProvider({ children }: { children: React.ReactNode }) {
         const saved = await listAttempts();
         if (active) setAttempts(saved);
       } catch (error) {
+        reportStorageProblem();
         console.error("No se pudo cargar el historial para el coach:", error);
       }
     }
@@ -131,6 +133,7 @@ export function LearningProvider({ children }: { children: React.ReactNode }) {
         }
         if (active) setAttempts(saved);
       } catch (error) {
+        reportStorageProblem();
         console.error("No se pudo recuperar todo el avance de estudio:", error);
       } finally {
         if (active) {

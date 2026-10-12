@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
+import { trackedStorage, reportStorageProblem } from "@/lib/storage/health";
 
 export interface TopicProgress {
   completedIds: string[];
@@ -92,7 +93,8 @@ export const useGrammarProgressStore = create<GrammarProgressState>()(
         const old = persisted as Partial<GrammarProgressState>;
         return { ...old, daysByProfile: old.daysByProfile ?? {} } as GrammarProgressState;
       },
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => trackedStorage),
+      onRehydrateStorage: () => (_state, error) => { if (error) reportStorageProblem(); },
       skipHydration: true,
       partialize: (state) => ({ byProfile: state.byProfile, daysByProfile: state.daysByProfile }),
     }

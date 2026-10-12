@@ -13,7 +13,7 @@ export function saveRuntimeSnapshot(attemptId: string, snapshot: unknown): void 
   try {
     window.localStorage.setItem(PREFIX + attemptId, JSON.stringify(snapshot));
   } catch {
-    // Best-effort — if storage is unavailable/full, resuming just won't work.
+    reportStorageProblem();
   }
 }
 
@@ -31,3 +31,4 @@ export function clearRuntimeSnapshot(attemptId: string): void {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(PREFIX + attemptId);
 }
+import { reportStorageProblem } from "./health";

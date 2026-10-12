@@ -10,6 +10,7 @@ import { useGrammarProgressStore } from "@/lib/grammar-c1/progress";
 import { useErrorNotebookStore } from "@/lib/notebook/store";
 import { emptyLearningProfile, learningStats } from "./model";
 import { learningProfileKey, useLearningStore } from "./store";
+import { hasCompleteSkillGrade } from "@/lib/exam/grade-status";
 
 const EMPTY = emptyLearningProfile();
 const SKILLS = [
@@ -52,14 +53,7 @@ export function useStudyOverview() {
   );
   const latest = attempts[0];
   const scoredSkills = latest?.scores
-    ? SKILLS.filter((skill) => {
-        if (skill === "writing" || skill === "speaking")
-          return (
-            latest.responses[skill].length === 2 &&
-            latest.responses[skill].every((response) => response.grading)
-          );
-        return true;
-      })
+    ? SKILLS.filter((skill) => hasCompleteSkillGrade(latest, skill))
     : [];
   const weakest =
     latest?.scores && scoredSkills.length
