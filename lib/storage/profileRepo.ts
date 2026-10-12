@@ -79,6 +79,8 @@ export function saveProfile(name: string, usernameInput: string): UserProfile {
   const trimmedName = name.trim().slice(0, 100) || username;
   const profiles = readProfiles();
   const index = profiles.findIndex((p) => p.username === username);
+  // Daily progress historically uses guest:day for the unnamed profile.
+  if (username === "guest" && index < 0) throw new Error("El usuario guest está reservado para Invitado.");
   const profile: UserProfile = {
     username,
     name: trimmedName,

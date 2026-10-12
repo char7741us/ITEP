@@ -47,6 +47,7 @@ export function ProfileDialog({
   function handleSave() {
     if (!name.trim()) return;
     const target = slugifyUsername(username || name);
+    if (creating && target === "guest") { setError("El usuario ‘guest’ está reservado para Invitado. Elige otro para mantener separado tu progreso."); return; }
     if (creating && profiles.some((profile) => profile.username === target)) { setError("Ese usuario ya tiene un perfil. Selecciónalo abajo o elige otro usuario para no cambiar su nombre."); return; }
     try { saveProfile(name, creating ? target : activeProfile!.username); onOpenChange(false); }
     catch { setError("No se pudo guardar el perfil. Revisa el almacenamiento de este navegador."); }
